@@ -1,0 +1,11 @@
+{
+  "dailyWordGoal": 500,
+  "weeklyWordGoal": 3500,
+  "monthlyWordGoal": 15000,
+  "trackingFolders": [],
+  "excludeFolders": [],
+  "showStatusBar": true,
+  "showRibbonIcon": true,
+  "notifications": true,
+  "countingMethod": "words"
+}
