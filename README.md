@@ -1,94 +1,352 @@
-# Obsidian Writing Momentum Plugin
+# Writing Momentum - Obsidian Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+> **Goal:** An Obsidian plugin that helps users write consistently. Focused on reminders and templates. Minimal friction, maximum persistence.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+**Vision:** "5 minutes, 3 sentences a day" to build long-term habits
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+## 🌟 Features
 
-## First time developing plugins?
+### ⏰ Smart Reminders
+- **Scheduled Reminders**: Daily/weekly reminders at your preferred times
+- **Click-to-Write**: Reminders open directly to your writing template
+- **Snooze Options**: 10-minute snooze for busy moments
+- **Do-Not-Disturb**: Quiet hours (e.g., 11:30 PM - 7:30 AM)
+- **Double Reminders**: Second notification if you miss the first one
 
-Quick starting guide for new plugin devs:
+### 📝 Template System
+- **Pre-built Templates**: Daily journal, blog outline, fiction scenes
+- **Variable Substitution**: 
+  - `{{date}}` - Current date (2025-09-07)
+  - `{{time}}` - Current time (9:00 PM)
+  - `{{weekday}}` - Day of week (Monday)
+  - `{{random_prompt}}` - Random writing prompt
+  - `{{vault}}` - Current vault name
+- **Smart File Naming**: Auto-generates filenames like "2025-09-07 Daily.md"
+- **Auto Organization**: Templates specify target folders
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+### 🔥 Streak Tracking
+- **Flexible Modes**: Daily streaks or weekly goals (e.g., 5 days/week)
+- **Grace Days**: Miss a day without breaking your streak (configurable)
+- **Visual Progress**: Weekly dots showing completed days
+- **Longest Streak**: Track your personal best
+- **Real-time Updates**: Streak updates as you write
 
-## Releasing new releases
+### 📊 Writing Dashboard
+- **Current Session**: Real-time word count, duration, WPM
+- **Progress Stats**: Today/week/month word counts
+- **Streak Visualization**: Current and longest streaks with weekly view
+- **Quick Actions**: One-click template creation
+- **Recent History**: Last 7 sessions with completion rates
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+### ⚡ Workflow Integration
+- **Command Palette**: All features accessible via Ctrl/Cmd+P
+- **Status Bar**: Shows current progress or session stats
+- **Auto Sessions**: Automatically tracks writing when you open notes
+- **Session Management**: Start, pause, complete, or end sessions
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## 🚀 Getting Started
 
-## Adding your plugin to the community plugin list
+### Installation
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+1. **Manual Installation**:
+   - Download the latest release files
+   - Copy to `.obsidian/plugins/writing-momentum/`
+   - Enable in Settings > Community Plugins
 
-## How to use
+2. **BRAT Installation** (recommended for beta):
+   - Install BRAT plugin
+   - Add repository URL
+   - Install and enable
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### First Setup
 
-## Manually installing the plugin
+1. **Open Dashboard**: Click ribbon icon or use Command Palette → "Open Writing Dashboard"
+2. **Configure Reminders**: Settings → Writing Momentum → Set your preferred reminder time
+3. **Choose Streak Mode**: Daily or weekly goals (default: 5 days/week)
+4. **Create First Note**: Use Command Palette → "New note from template"
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## 📖 Usage Guide
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+### Daily Workflow
 
-## Funding URL
+1. **Get Reminded**: Notification appears at your set time
+2. **Click to Write**: Reminder opens template with today's prompt
+3. **Write**: Aim for 3 sentences minimum (or your goal)
+4. **Complete**: Use dashboard button or let auto-complete when target reached
+5. **Track Progress**: View stats and maintain streak
 
-You can include funding URLs where people who use your plugin can financially support it.
+### Templates
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+#### Default Templates
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+**Daily 3-Lines** (`daily-3lines.md`):
+```markdown
+---
+title: "{{date}}"
+type: daily
+tags: [journal, daily]
+---
+{{random_prompt}}
+
+- Line 1
+- Line 2  
+- Line 3
 ```
 
-If you have multiple URLs, you can also do:
+**Blog Outline** (`blog-outline.md`):
+```markdown
+---
+title: "{{date}} {{topic}} Draft"
+type: blog
+tags: [blog, draft]
+---
+# Introduction
+{{random_prompt}}
 
+## Body
+- Key Idea 1
+- Key Idea 2
+
+## Conclusion
+- Summary & Next action
+```
+
+**Fiction Scene** (`fiction-scene.md`):
+```markdown
+---
+title: "Scene - {{date}}"
+type: fiction
+tags: [novel, scene]
+---
+## Scene Goal
+{{random_prompt}}
+
+## Characters
+- Protagonist:
+- Other:
+
+## Conflict/Turn
+- Obstacle:
+- Twist:
+```
+
+#### Custom Templates
+
+Create templates in `.writing-momentum/templates/`:
+
+```markdown
+---
+name: My Custom Template
+category: custom
+description: Your template description
+filePaths:
+  pattern: "{{date}} - {{title}}.md"
+  folder: "MyWriting"
+---
+Your template content with {{variables}}
+```
+
+### Writing Prompts
+
+Default prompts in `.writing-momentum/prompts.md`:
+
+```markdown
+# Writing Prompts
+
+- What was the most meaningful moment today?
+- What did I learn today?
+- Express your current feeling in one word.
+- What am I grateful for right now?
+- What challenge did I overcome today?
+```
+
+Add your own prompts to this file - one per line with `- ` prefix.
+
+## ⚙️ Configuration
+
+### Reminder Settings
+
+- **Default Time**: 21:00 (9:00 PM)
+- **Days**: All days (can customize per reminder)
+- **Double Reminder**: 30 minutes after first missed
+- **Do-Not-Disturb**: 23:30 - 07:30 (customizable)
+
+### Streak Settings
+
+- **Mode**: 
+  - Daily: Write every day
+  - Weekly: Hit target days per week (recommended)
+- **Weekly Target**: 5 days (adjustable 1-7)
+- **Grace Days**: 1 day forgiveness (adjustable 0-3)
+
+### File Paths
+
+- **Templates**: `.writing-momentum/templates/`
+- **Prompts**: `.writing-momentum/prompts.md`
+- Both paths are customizable in settings
+
+## 🎯 Commands
+
+| Command | Description | Shortcut |
+|---------|-------------|----------|
+| Open Writing Dashboard | View stats and progress | - |
+| New note from template | Create note using template | - |
+| Create quick note | Fast note with random prompt | - |
+| Complete writing session | Mark current session done | - |
+| Insert random prompt | Add prompt to current note | - |
+| Snooze reminder | 10-minute reminder delay | - |
+
+*Shortcuts can be customized in Obsidian's Hotkeys settings*
+
+## 📊 Data & Privacy
+
+### Local Storage
+- All data stored locally in `.obsidian/plugins/writing-momentum/data.json`
+- No external servers or accounts required
+- Compatible with Obsidian Sync for cross-device sync
+
+### Data Export
+- Export sessions and streak data via Settings
+- JSON format for backup or analysis
+- Import capability for data migration
+
+### What's Tracked
+- Writing sessions (date, duration, word count)
+- Streak statistics (current, longest, weekly progress)
+- Template usage and completion rates
+- No content is stored - only metadata
+
+## 🛠️ Advanced Usage
+
+### Multiple Reminders
 ```json
 {
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
+  "reminders": [
+    {
+      "id": "morning",
+      "time": "08:00",
+      "days": [1,2,3,4,5],
+      "templateId": "daily-3lines"
+    },
+    {
+      "id": "evening", 
+      "time": "21:00",
+      "days": [0,1,2,3,4,5,6],
+      "templateId": "reflection"
     }
+  ]
 }
 ```
 
-## API Documentation
+### Custom File Naming
+Template frontmatter supports:
+```yaml
+filePaths:
+  pattern: "{{date}} - {{mood}} Journal.md"
+  folder: "Daily/{{weekday}}"
+```
 
-See https://github.com/obsidianmd/obsidian-api
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Reminders not appearing**:
+- Check if notifications are enabled in browser/OS
+- Verify reminder time isn't in do-not-disturb period
+- Restart Obsidian after changing settings
+
+**Templates not found**:
+- Ensure templates folder exists: `.writing-momentum/templates/`
+- Check template file extension is `.md`
+- Verify template syntax and frontmatter
+
+**Streak not updating**:
+- Write at least 1 word and complete session
+- Check streak mode settings (daily vs weekly)
+- Verify date/time settings are correct
+
+**Word count issues**:
+- Word count excludes frontmatter
+- Only counts completed sessions
+- Auto-saves every 5 seconds during sessions
+
+### Performance
+
+**Plugin runs slowly**:
+- Reduce reminder frequency
+- Limit prompt file size
+- Clear old session data via export/import
+
+**High memory usage**:
+- Large vaults: disable auto-session detection
+- Limit tracked folders in settings
+- Restart Obsidian periodically
+
+## 🔄 Updates & Roadmap
+
+### Version 1.0.0 Features
+✅ Daily/weekly reminders with snooze  
+✅ Template system with variable substitution    
+✅ Flexible streak tracking with grace days  
+✅ Beautiful dashboard with real-time stats  
+✅ Session management and word counting  
+✅ Data export and local storage  
+✅ Mobile compatibility  
+
+### Planned Features (v1.1+)
+🔄 Calendar integration for reminders  
+🔄 Voice-to-text input support    
+🔄 AI-assisted prompt generation  
+🔄 Weekly/monthly summary reports  
+🔄 Integration with task management plugins  
+🔄 Advanced template conditionals and loops  
+🔄 Custom CSS themes for dashboard  
+🔄 Plugin API for third-party integrations  
+
+## 🤝 Contributing
+
+### Feedback & Issues
+- GitHub Issues: Report bugs and request features
+- Community: Share templates and workflows
+- Documentation: Help improve this guide
+
+### Development
+```bash
+# Clone repository
+git clone https://github.com/zafrem/obsidian-writing-momentum
+
+# Install dependencies  
+npm install
+
+# Development build with hot reload
+npm run dev
+
+# Production build
+npm run build
+
+# Run tests
+npm test
+```
+
+### Template Contributions
+Share your templates by creating issues with:
+- Template markdown file
+- Use case description
+- Screenshot of result
+
+## 📜 License
+
+MIT License - see LICENSE file for details.
+
+## 🙏 Credits
+
+- Inspired by Don't Break the Chain methodology
+- Built with Obsidian Plugin API
+- Icons from Lucide Icons
+- Streak visualization inspired by GitHub contributions
+
+---
+
+**Happy Writing! 🎉**
+
+*Build the habit, one sentence at a time.*

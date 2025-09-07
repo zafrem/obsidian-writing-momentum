@@ -1,9 +1,9 @@
 {
 	"id": "writing-momentum",
 	"name": "Writing Momentum",
-	"version": "0.0.1",
-	"minAppVersion": "0.0.1",
-	"description": "Tracks your writing momentum.",
+	"version": "1.0.0",
+	"minAppVersion": "1.6.0",
+	"description": "An Obsidian plugin that helps users write consistently. Focused on reminders, templates, and habit building. Minimal friction, maximum persistence.",
 	"author": "Zafrem",
 	"authorUrl": "https://github.com/zafrem",
 	"fundingUrl": "https://github.com/sponsors/zafrem",

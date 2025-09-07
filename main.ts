@@ -1,388 +1,175 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, ItemView, WorkspaceLeaf } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, TFile, Notice, MarkdownView } from 'obsidian';
 
-interface WritingSession {
-	id: string;
-	start: number;
-	end?: number;
-	wordCount: number;
-	files: string[];
-}
+// Core modules
+import { ReminderScheduler } from './src/core/scheduler';
+import { TemplateEngine } from './src/core/template-engine';
+import { DataManager } from './src/core/data-manager';
+import { SessionManager } from './src/core/session-manager';
 
-interface WritingGoal {
-	id: string;
-	name: string;
-	target: number;
-	type: 'daily' | 'weekly' | 'monthly';
-	active: boolean;
-	created: number;
-	folders?: string[];
-}
+// UI components
+import { WritingDashboard, VIEW_TYPE_WRITING_DASHBOARD } from './src/ui/dashboard';
 
-interface WritingStreak {
-	current: number;
-	longest: number;
-	lastWritingDay: string;
-}
-
-interface WritingMomentumSettings {
-	dailyWordGoal: number;
-	weeklyWordGoal: number;
-	monthlyWordGoal: number;
-	trackingFolders: string[];
-	excludeFolders: string[];
-	showStatusBar: boolean;
-	showRibbonIcon: boolean;
-	notifications: boolean;
-	countingMethod: 'words' | 'characters';
-}
-
-const DEFAULT_SETTINGS: WritingMomentumSettings = {
-	dailyWordGoal: 500,
-	weeklyWordGoal: 3500,
-	monthlyWordGoal: 15000,
-	trackingFolders: [],
-	excludeFolders: [],
-	showStatusBar: true,
-	showRibbonIcon: true,
-	notifications: true,
-	countingMethod: 'words'
-};
-
-class WordCounter {
-	static countWords(text: string): number {
-		return text.trim().split(/\s+/).filter(word => word.length > 0).length;
-	}
-
-	static countCharacters(text: string): number {
-		return text.replace(/\s/g, '').length;
-	}
-
-	static count(text: string, method: 'words' | 'characters'): number {
-		return method === 'words' ? this.countWords(text) : this.countCharacters(text);
-	}
-}
-
-class DataManager {
-	private plugin: WritingMomentumPlugin;
-	private sessions: WritingSession[] = [];
-	private goals: WritingGoal[] = [];
-	private streak: WritingStreak = { current: 0, longest: 0, lastWritingDay: '' };
-
-	constructor(plugin: WritingMomentumPlugin) {
-		this.plugin = plugin;
-	}
-
-	async loadData() {
-		const data = await this.plugin.loadData();
-		if (data) {
-			this.sessions = data.sessions || [];
-			this.goals = data.goals || [];
-			this.streak = data.streak || { current: 0, longest: 0, lastWritingDay: '' };
-		}
-	}
-
-	async saveData() {
-		await this.plugin.saveData({
-			sessions: this.sessions,
-			goals: this.goals,
-			streak: this.streak
-		});
-	}
-
-	addSession(session: WritingSession) {
-		this.sessions.push(session);
-		this.updateStreak();
-		this.saveData();
-	}
-
-	addGoal(goal: WritingGoal) {
-		this.goals.push(goal);
-		this.saveData();
-	}
-
-	getTodaysSessions(): WritingSession[] {
-		const today = new Date().toDateString();
-		return this.sessions.filter(session => 
-			new Date(session.start).toDateString() === today
-		);
-	}
-
-	getTodaysWordCount(): number {
-		return this.getTodaysSessions().reduce((total, session) => total + session.wordCount, 0);
-	}
-
-	getActiveGoals(): WritingGoal[] {
-		return this.goals.filter(goal => goal.active);
-	}
-
-	getStreak(): WritingStreak {
-		return this.streak;
-	}
-
-	private updateStreak() {
-		const today = new Date().toDateString();
-		const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
-		
-		if (this.streak.lastWritingDay === today) {
-			return;
-		}
-		
-		if (this.streak.lastWritingDay === yesterday) {
-			this.streak.current++;
-		} else if (this.streak.lastWritingDay !== today) {
-			this.streak.current = 1;
-		}
-		
-		this.streak.lastWritingDay = today;
-		if (this.streak.current > this.streak.longest) {
-			this.streak.longest = this.streak.current;
-		}
-	}
-}
-
-const VIEW_TYPE_WRITING_DASHBOARD = 'writing-dashboard';
-
-class WritingDashboardView extends ItemView {
-	plugin: WritingMomentumPlugin;
-
-	constructor(leaf: WorkspaceLeaf, plugin: WritingMomentumPlugin) {
-		super(leaf);
-		this.plugin = plugin;
-	}
-
-	getViewType() {
-		return VIEW_TYPE_WRITING_DASHBOARD;
-	}
-
-	getDisplayText() {
-		return 'Writing Dashboard';
-	}
-
-	async onOpen() {
-		const container = this.containerEl.children[1];
-		container.empty();
-		container.createEl('h2', { text: 'Writing Dashboard' });
-		
-		this.renderStats(container);
-		this.renderGoals(container);
-		this.renderStreak(container);
-	}
-
-	private renderStats(container: Element) {
-		const statsContainer = container.createEl('div', { cls: 'writing-stats' });
-		statsContainer.createEl('h3', { text: 'Today\'s Progress' });
-		
-		const todaysCount = this.plugin.dataManager.getTodaysWordCount();
-		const dailyGoal = this.plugin.settings.dailyWordGoal;
-		const progress = Math.min((todaysCount / dailyGoal) * 100, 100);
-		
-		statsContainer.createEl('p', { text: `Words written: ${todaysCount}/${dailyGoal}` });
-		statsContainer.createEl('p', { text: `Progress: ${progress.toFixed(1)}%` });
-	}
-
-	private renderGoals(container: Element) {
-		const goalsContainer = container.createEl('div', { cls: 'writing-goals' });
-		goalsContainer.createEl('h3', { text: 'Active Goals' });
-		
-		const activeGoals = this.plugin.dataManager.getActiveGoals();
-		if (activeGoals.length === 0) {
-			goalsContainer.createEl('p', { text: 'No active goals. Set one to get started!' });
-		} else {
-			activeGoals.forEach(goal => {
-				goalsContainer.createEl('p', { text: `${goal.name}: ${goal.target} ${this.plugin.settings.countingMethod}` });
-			});
-		}
-	}
-
-	private renderStreak(container: Element) {
-		const streakContainer = container.createEl('div', { cls: 'writing-streak' });
-		streakContainer.createEl('h3', { text: 'Writing Streak' });
-		
-		const streak = this.plugin.dataManager.getStreak();
-		streakContainer.createEl('p', { text: `Current streak: ${streak.current} days` });
-		streakContainer.createEl('p', { text: `Longest streak: ${streak.longest} days` });
-	}
-
-	async onClose() {
-		// Nothing to clean up
-	}
-}
+// Types
+import type { WritingMomentumSettings } from './src/types/interfaces';
+import { DEFAULT_SETTINGS } from './src/types/interfaces';
 
 export default class WritingMomentumPlugin extends Plugin {
 	settings: WritingMomentumSettings;
 	dataManager: DataManager;
-	statusBarItem: HTMLElement;
-	currentSession: WritingSession | null = null;
+	templateEngine: TemplateEngine;
+	sessionManager: SessionManager;
+	reminderScheduler: ReminderScheduler;
+	statusBarItem: HTMLElement | null = null;
 
 	async onload() {
 		await this.loadSettings();
+		
+		// Initialize core systems
 		this.dataManager = new DataManager(this);
-		await this.dataManager.loadData();
+		this.templateEngine = new TemplateEngine(this);
+		this.sessionManager = new SessionManager(this);
+		this.reminderScheduler = new ReminderScheduler(this);
 
+		await this.dataManager.loadData();
+		await this.templateEngine.initialize();
+
+		// Register dashboard view
 		this.registerView(
 			VIEW_TYPE_WRITING_DASHBOARD,
-			(leaf) => new WritingDashboardView(leaf, this)
+			(leaf) => new WritingDashboard(leaf, this)
 		);
 
-		if (this.settings.showRibbonIcon) {
+		// Setup UI elements
+		if (this.settings.ui.showRibbonIcon) {
 			this.addRibbonIcon('target', 'Writing Momentum', () => {
 				this.activateView();
 			});
 		}
 
-		if (this.settings.showStatusBar) {
+		if (this.settings.ui.showStatusBar) {
 			this.statusBarItem = this.addStatusBarItem();
-			this.updateStatusBar();
 		}
 
-		this.addCommand({
-			id: 'open-writing-dashboard',
-			name: 'Open Writing Dashboard',
-			callback: () => {
-				this.activateView();
-			}
-		});
+		// Register commands
+		this.registerCommands();
 
-		this.addCommand({
-			id: 'start-writing-session',
-			name: 'Start Writing Session',
-			callback: () => {
-				this.startWritingSession();
-			}
-		});
-
-		this.addCommand({
-			id: 'end-writing-session',
-			name: 'End Writing Session',
-			callback: () => {
-				this.endWritingSession();
-			}
-		});
-
+		// Add settings tab
 		this.addSettingTab(new WritingMomentumSettingTab(this.app, this));
 
+		// Register event handlers
 		this.registerEvent(
 			this.app.workspace.on('file-open', (file) => {
-				if (file && this.shouldTrackFile(file)) {
-					this.startAutoSession(file);
+				if (file) {
+					this.sessionManager.handleFileOpen(file);
 				}
 			})
 		);
 
-		this.registerInterval(
-			window.setInterval(() => {
-				this.updateStatusBar();
-			}, 30000)
-		);
+		// Start reminder system
+		this.reminderScheduler.start();
+	}
+
+	private registerCommands() {
+		this.addCommand({
+			id: 'open-dashboard',
+			name: 'Open Writing Dashboard',
+			callback: () => this.activateView()
+		});
+
+		this.addCommand({
+			id: 'new-from-template',
+			name: 'New note from template',
+			callback: () => this.showTemplateSelector()
+		});
+
+		this.addCommand({
+			id: 'quick-note',
+			name: 'Create quick note',
+			callback: () => this.createQuickNote()
+		});
+
+		this.addCommand({
+			id: 'complete-session',
+			name: 'Complete writing session',
+			callback: () => this.sessionManager.completeSession()
+		});
+
+		this.addCommand({
+			id: 'snooze-reminder',
+			name: 'Snooze reminder (10 minutes)',
+			callback: () => {
+				// This would be called from reminder context
+				new Notice('Reminder snoozed for 10 minutes');
+			}
+		});
+
+		this.addCommand({
+			id: 'insert-random-prompt',
+			name: 'Insert random writing prompt',
+			callback: () => this.insertRandomPrompt()
+		});
 	}
 
 	async activateView() {
 		const { workspace } = this.app;
 		
-		let leaf: WorkspaceLeaf;
-		const leaves = workspace.getLeavesOfType(VIEW_TYPE_WRITING_DASHBOARD);
+		let leaf = workspace.getLeavesOfType(VIEW_TYPE_WRITING_DASHBOARD)[0];
 
-		if (leaves.length > 0) {
-			leaf = leaves[0];
-		} else {
-			const rightLeaf = workspace.getRightLeaf(false);
-			if (rightLeaf) {
-				leaf = rightLeaf;
-				await leaf.setViewState({ type: VIEW_TYPE_WRITING_DASHBOARD, active: true });
-			} else {
-				return;
-			}
+		if (!leaf) {
+			leaf = workspace.getRightLeaf(false)!;
+			await leaf.setViewState({ type: VIEW_TYPE_WRITING_DASHBOARD, active: true });
 		}
 
 		workspace.revealLeaf(leaf);
 	}
 
-	private shouldTrackFile(file: TFile): boolean {
-		if (this.settings.trackingFolders.length === 0) {
-			return true;
-		}
+	async showTemplateSelector() {
+		const templates = this.templateEngine.getAllTemplates();
 		
-		for (const folder of this.settings.excludeFolders) {
-			if (file.path.startsWith(folder)) {
-				return false;
-			}
-		}
-		
-		for (const folder of this.settings.trackingFolders) {
-			if (file.path.startsWith(folder)) {
-				return true;
-			}
-		}
-		
-		return this.settings.trackingFolders.length === 0;
-	}
-
-	private startAutoSession(file: TFile) {
-		if (!this.currentSession) {
-			this.startWritingSession([file.path]);
-		}
-	}
-
-	private startWritingSession(files: string[] = []) {
-		if (this.currentSession) {
-			this.endWritingSession();
-		}
-		
-		this.currentSession = {
-			id: Date.now().toString(),
-			start: Date.now(),
-			wordCount: 0,
-			files: files
-		};
-		
-		new Notice('Writing session started!');
-	}
-
-	private endWritingSession() {
-		if (!this.currentSession) {
+		if (templates.length === 0) {
+			new Notice('No templates found. Creating default templates...');
+			await this.templateEngine.reloadTemplates();
 			return;
 		}
-		
-		this.currentSession.end = Date.now();
-		this.currentSession.wordCount = this.calculateSessionWordCount();
-		
-		this.dataManager.addSession(this.currentSession);
-		
-		const duration = Math.round((this.currentSession.end - this.currentSession.start) / 60000);
-		new Notice(`Session ended! Wrote ${this.currentSession.wordCount} words in ${duration} minutes.`);
-		
-		this.currentSession = null;
+
+		// Simple template selection - could be enhanced with a proper modal
+		const template = templates[0]; // Use first template for now
+		await this.templateEngine.createNoteFromTemplate(template.id);
 	}
 
-	private calculateSessionWordCount(): number {
-		let totalWords = 0;
-		
-		for (const filePath of this.currentSession?.files || []) {
-			const file = this.app.vault.getAbstractFileByPath(filePath);
-			if (file instanceof TFile) {
-				this.app.vault.cachedRead(file).then(content => {
-					totalWords += WordCounter.count(content, this.settings.countingMethod);
-				});
-			}
+	async createQuickNote() {
+		const today = new Date().toISOString().split('T')[0];
+		const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+		const fileName = `${today} Quick Note ${time}.md`;
+		const content = `# Quick Note - ${today}\n\n${this.templateEngine['getRandomPrompt']()}\n\n---\n\n`;
+
+		try {
+			const file = await this.app.vault.create(fileName, content);
+			const leaf = this.app.workspace.getLeaf();
+			await leaf.openFile(file);
+			this.sessionManager.startSession(file.path);
+		} catch (error) {
+			console.error('Failed to create quick note:', error);
+			new Notice('Failed to create quick note');
 		}
-		
-		return totalWords;
 	}
 
-	private updateStatusBar() {
-		if (!this.statusBarItem) return;
-		
-		const todaysCount = this.dataManager.getTodaysWordCount();
-		const dailyGoal = this.settings.dailyWordGoal;
-		const progress = Math.min((todaysCount / dailyGoal) * 100, 100);
-		
-		this.statusBarItem.setText(`${todaysCount}/${dailyGoal} words (${progress.toFixed(0)}%)`);
+	async insertRandomPrompt() {
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!activeView) {
+			new Notice('No active note to insert prompt into');
+			return;
+		}
+
+		const prompt = this.templateEngine['getRandomPrompt']();
+		const editor = activeView.editor;
+		const cursor = editor.getCursor();
+		editor.replaceRange(prompt, cursor);
 	}
 
 	onunload() {
-		if (this.currentSession) {
-			this.endWritingSession();
-		}
+		this.sessionManager.cleanup();
+		this.reminderScheduler.stop();
 	}
 
 	async loadSettings() {
@@ -391,7 +178,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-		this.updateStatusBar();
+		this.reminderScheduler.reschedule();
 	}
 }
 
@@ -409,58 +196,71 @@ class WritingMomentumSettingTab extends PluginSettingTab {
 
 		containerEl.createEl('h2', {text: 'Writing Momentum Settings'});
 
+		// Reminders Section
+		containerEl.createEl('h3', {text: '⏰ Reminders'});
+		
 		new Setting(containerEl)
-			.setName('Daily word goal')
-			.setDesc('Target number of words to write each day')
+			.setName('Default reminder time')
+			.setDesc('Time for daily writing reminders (24-hour format)')
 			.addText(text => text
-				.setPlaceholder('500')
-				.setValue(this.plugin.settings.dailyWordGoal.toString())
+				.setPlaceholder('21:00')
+				.setValue(this.plugin.settings.reminders[0]?.time || '21:00')
 				.onChange(async (value) => {
-					this.plugin.settings.dailyWordGoal = parseInt(value) || 500;
-					await this.plugin.saveSettings();
+					if (this.plugin.settings.reminders[0]) {
+						this.plugin.settings.reminders[0].time = value;
+						await this.plugin.saveSettings();
+					}
 				}));
 
+		// Streak Section
+		containerEl.createEl('h3', {text: '🔥 Streak Settings'});
+		
 		new Setting(containerEl)
-			.setName('Weekly word goal')
-			.setDesc('Target number of words to write each week')
-			.addText(text => text
-				.setPlaceholder('3500')
-				.setValue(this.plugin.settings.weeklyWordGoal.toString())
-				.onChange(async (value) => {
-					this.plugin.settings.weeklyWordGoal = parseInt(value) || 3500;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Monthly word goal')
-			.setDesc('Target number of words to write each month')
-			.addText(text => text
-				.setPlaceholder('15000')
-				.setValue(this.plugin.settings.monthlyWordGoal.toString())
-				.onChange(async (value) => {
-					this.plugin.settings.monthlyWordGoal = parseInt(value) || 15000;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Counting method')
-			.setDesc('Choose whether to count words or characters')
+			.setName('Streak mode')
+			.setDesc('How to calculate writing streaks')
 			.addDropdown(dropdown => dropdown
-				.addOption('words', 'Words')
-				.addOption('characters', 'Characters')
-				.setValue(this.plugin.settings.countingMethod)
-				.onChange(async (value: 'words' | 'characters') => {
-					this.plugin.settings.countingMethod = value;
+				.addOption('daily', 'Daily')
+				.addOption('weekly', 'Weekly')
+				.setValue(this.plugin.settings.streakRule.mode)
+				.onChange(async (value: 'daily' | 'weekly') => {
+					this.plugin.settings.streakRule.mode = value;
 					await this.plugin.saveSettings();
 				}));
+
+		new Setting(containerEl)
+			.setName('Weekly target')
+			.setDesc('Number of writing days needed per week')
+			.addSlider(slider => slider
+				.setLimits(1, 7, 1)
+				.setValue(this.plugin.settings.streakRule.target)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.streakRule.target = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Grace days')
+			.setDesc('Number of days you can miss without breaking streak')
+			.addSlider(slider => slider
+				.setLimits(0, 3, 1)
+				.setValue(this.plugin.settings.streakRule.grace)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.streakRule.grace = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// UI Section
+		containerEl.createEl('h3', {text: '🎨 Interface'});
 
 		new Setting(containerEl)
 			.setName('Show status bar')
 			.setDesc('Display writing progress in the status bar')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showStatusBar)
+				.setValue(this.plugin.settings.ui.showStatusBar)
 				.onChange(async (value) => {
-					this.plugin.settings.showStatusBar = value;
+					this.plugin.settings.ui.showStatusBar = value;
 					await this.plugin.saveSettings();
 				}));
 
@@ -468,9 +268,9 @@ class WritingMomentumSettingTab extends PluginSettingTab {
 			.setName('Show ribbon icon')
 			.setDesc('Display plugin icon in the left ribbon')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showRibbonIcon)
+				.setValue(this.plugin.settings.ui.showRibbonIcon)
 				.onChange(async (value) => {
-					this.plugin.settings.showRibbonIcon = value;
+					this.plugin.settings.ui.showRibbonIcon = value;
 					await this.plugin.saveSettings();
 				}));
 
@@ -478,10 +278,53 @@ class WritingMomentumSettingTab extends PluginSettingTab {
 			.setName('Enable notifications')
 			.setDesc('Show notifications for achievements and reminders')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.notifications)
+				.setValue(this.plugin.settings.ui.notifications)
 				.onChange(async (value) => {
-					this.plugin.settings.notifications = value;
+					this.plugin.settings.ui.notifications = value;
 					await this.plugin.saveSettings();
+				}));
+
+		// Paths Section
+		containerEl.createEl('h3', {text: '📁 File Paths'});
+		
+		new Setting(containerEl)
+			.setName('Templates folder')
+			.setDesc('Folder containing writing templates')
+			.addText(text => text
+				.setPlaceholder('.writing-momentum/templates')
+				.setValue(this.plugin.settings.paths.templates)
+				.onChange(async (value) => {
+					this.plugin.settings.paths.templates = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Prompts file')
+			.setDesc('File containing writing prompts')
+			.addText(text => text
+				.setPlaceholder('.writing-momentum/prompts.md')
+				.setValue(this.plugin.settings.paths.prompts)
+				.onChange(async (value) => {
+					this.plugin.settings.paths.prompts = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Data Management
+		containerEl.createEl('h3', {text: '💾 Data Management'});
+		
+		new Setting(containerEl)
+			.setName('Export data')
+			.setDesc('Export all writing sessions and streak data')
+			.addButton(button => button
+				.setButtonText('Export')
+				.onClick(() => {
+					const data = this.plugin.dataManager.exportData();
+					const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = `writing-momentum-export-${new Date().toISOString().split('T')[0]}.json`;
+					a.click();
 				}));
 	}
 }

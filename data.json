@@ -1,11 +1,19 @@
 {
-  "dailyWordGoal": 500,
-  "weeklyWordGoal": 3500,
-  "monthlyWordGoal": 15000,
-  "trackingFolders": [],
-  "excludeFolders": [],
-  "showStatusBar": true,
-  "showRibbonIcon": true,
-  "notifications": true,
-  "countingMethod": "words"
+  "sessions": [
+    {
+      "id": "1757219282639",
+      "start": 1757219282639,
+      "wordCount": 0,
+      "files": [
+        "Welcome.md"
+      ],
+      "end": 1757219420194
+    }
+  ],
+  "goals": [],
+  "streak": {
+    "current": 1,
+    "longest": 1,
+    "lastWritingDay": "Sun Sep 07 2025"
+  }
 }
