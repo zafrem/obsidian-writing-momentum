@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-writing-momentum",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "Tracks your writing momentum.",
 	"main": "main.js",
 	"scripts": {

@@ -1,77 +1,17 @@
 import { TFile, TFolder } from 'obsidian';
 import type { Template, TemplateVariable, PromptSource } from '../types/interfaces';
-import type WritingMomentumPlugin from '../../main';
+import type { IWritingMomentumPlugin } from '../types/plugin-interface';
 
 export class TemplateEngine {
-  private plugin: WritingMomentumPlugin;
-  private templates: Map<string, Template> = new Map();
+  private plugin: IWritingMomentumPlugin;
   private prompts: string[] = [];
 
-  constructor(plugin: WritingMomentumPlugin) {
+  constructor(plugin: IWritingMomentumPlugin) {
     this.plugin = plugin;
   }
 
   async initialize() {
-    await this.loadTemplates();
     await this.loadPrompts();
-  }
-
-  private async loadTemplates() {
-    const templatePath = this.plugin.settings.paths.templates;
-    const templateFolder = this.plugin.app.vault.getAbstractFileByPath(templatePath);
-    
-    if (!(templateFolder instanceof TFolder)) {
-      await this.createDefaultTemplates();
-      return;
-    }
-
-    const templateFiles = templateFolder.children.filter(child => 
-      child instanceof TFile && child.extension === 'md'
-    ) as TFile[];
-
-    for (const file of templateFiles) {
-      try {
-        const content = await this.plugin.app.vault.read(file);
-        const template = this.parseTemplate(file, content);
-        this.templates.set(template.id, template);
-      } catch (error) {
-        console.error(`Failed to load template ${file.path}:`, error);
-      }
-    }
-  }
-
-  private parseTemplate(file: TFile, content: string): Template {
-    const frontmatter = this.extractFrontmatter(content);
-    const templateContent = content.replace(/^---[\s\S]*?---\n/, '');
-    
-    const variables = this.extractVariables(templateContent);
-    
-    return {
-      id: file.basename,
-      name: frontmatter.name || file.basename,
-      content: templateContent,
-      variables,
-      category: frontmatter.category || 'custom',
-      description: frontmatter.description,
-      filePaths: frontmatter.filePaths
-    };
-  }
-
-  private extractFrontmatter(content: string): any {
-    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-    if (!frontmatterMatch) return {};
-
-    const frontmatterLines = frontmatterMatch[1].split('\n');
-    const frontmatter: any = {};
-
-    for (const line of frontmatterLines) {
-      const [key, ...valueParts] = line.split(':');
-      if (key && valueParts.length > 0) {
-        frontmatter[key.trim()] = valueParts.join(':').trim();
-      }
-    }
-
-    return frontmatter;
   }
 
   private extractVariables(content: string): string[] {
@@ -84,86 +24,6 @@ export class TemplateEngine {
     }
 
     return Array.from(variables);
-  }
-
-  private async createDefaultTemplates() {
-    const templatePath = this.plugin.settings.paths.templates;
-    await this.plugin.app.vault.createFolder(templatePath).catch(() => {});
-
-    const defaultTemplates = [
-      {
-        filename: 'daily-3lines.md',
-        content: `---
-name: Daily 3 Lines
-category: daily
-description: Simple 3-line daily journal
-filePaths:
-  pattern: "{{date}} Daily.md"
-  folder: "Journal"
----
-{{random_prompt}}
-
-- Line 1
-- Line 2  
-- Line 3`
-      },
-      {
-        filename: 'blog-outline.md',
-        content: `---
-name: Blog Outline
-category: blog
-description: Blog post structure template
-filePaths:
-  pattern: "Blog-{{date}}-{{slug}}.md"
-  folder: "Blog"
----
-# {{title}}
-
-## Introduction
-{{random_prompt}}
-
-## Body
-- Key Idea 1
-- Key Idea 2
-
-## Conclusion
-- Summary & Next action`
-      },
-      {
-        filename: 'fiction-scene.md',
-        content: `---
-name: Fiction Scene
-category: fiction
-description: Fiction writing scene template
-filePaths:
-  pattern: "Scene-{{date}}.md"
-  folder: "Writing/Scenes"
----
-## Scene Goal
-{{random_prompt}}
-
-## Characters
-- Protagonist:
-- Other:
-
-## Conflict/Turn
-- Obstacle:
-- Twist:
-
-## Closing Image`
-      }
-    ];
-
-    for (const template of defaultTemplates) {
-      const filePath = `${templatePath}/${template.filename}`;
-      try {
-        await this.plugin.app.vault.create(filePath, template.content);
-      } catch (error) {
-        // File might already exist, ignore
-      }
-    }
-
-    await this.loadTemplates();
   }
 
   private async loadPrompts() {
@@ -228,38 +88,32 @@ filePaths:
     }
   }
 
-  async createNoteFromTemplate(templateId: string, customVariables?: Record<string, string>) {
-    const template = this.templates.get(templateId);
-    if (!template) {
-      throw new Error(`Template '${templateId}' not found`);
-    }
-
+  async createNoteFromTemplate(customVariables?: Record<string, string>) {
     const variables = this.buildVariables(customVariables);
-    const processedContent = this.processTemplate(template.content, variables);
-    const fileName = this.generateFileName(template, variables);
-    const folderPath = template.filePaths?.folder || '';
+    const processedTitle = this.processTemplate(this.plugin.settings.defaultTitlePattern, variables);
+    const processedContent = this.processTemplate(this.plugin.settings.defaultTemplate, variables);
 
-    if (folderPath) {
-      await this.plugin.app.vault.createFolder(folderPath).catch(() => {});
-    }
+    // Replace title variable in content if it exists
+    const titleVariable = { name: 'title', value: processedTitle };
+    const finalContent = this.processTemplate(processedContent, [titleVariable]);
 
-    const filePath = folderPath ? `${folderPath}/${fileName}` : fileName;
-    
+    const fileName = `${processedTitle}.md`;
+
     try {
-      const file = await this.plugin.app.vault.create(filePath, processedContent);
-      
+      const file = await this.plugin.app.vault.create(fileName, finalContent);
+
       // Open the created file
       const leaf = this.plugin.app.workspace.getLeaf();
       await leaf.openFile(file);
-      
+
       // Start a writing session
-      this.plugin.sessionManager.startSession(file.path, templateId);
-      
+      this.plugin.sessionManager.startSession(file.path, 'default');
+
       return file;
     } catch (error) {
       if (error.message.includes('already exists')) {
         // File exists, open it instead
-        const existingFile = this.plugin.app.vault.getAbstractFileByPath(filePath) as TFile;
+        const existingFile = this.plugin.app.vault.getAbstractFileByPath(fileName) as TFile;
         const leaf = this.plugin.app.workspace.getLeaf();
         await leaf.openFile(existingFile);
         return existingFile;
@@ -314,21 +168,6 @@ filePaths:
     return processed;
   }
 
-  private generateFileName(template: Template, variables: TemplateVariable[]): string {
-    if (!template.filePaths?.pattern) {
-      const date = variables.find(v => v.name === 'date')?.value || 'untitled';
-      return `${date}-${template.id}.md`;
-    }
-
-    let fileName = template.filePaths.pattern;
-    for (const variable of variables) {
-      const value = typeof variable.value === 'function' ? variable.value() : variable.value;
-      const regex = new RegExp(`\\{\\{\\s*${variable.name}\\s*\\}\\}`, 'g');
-      fileName = fileName.replace(regex, value);
-    }
-
-    return fileName;
-  }
 
   private formatDate(date: Date): string {
     const format = this.plugin.settings.dateFormat;
@@ -342,26 +181,43 @@ filePaths:
       .replace('DD', day);
   }
 
-  private getRandomPrompt(): string {
+  getRandomPrompt(): string {
+    // Try to use random prompts if enabled
+    if (this.plugin.settings.randomPrompts?.enabled && this.plugin.randomPrompts) {
+      const randomPrompt = this.plugin.randomPrompts.getRandomNetworkPrompt();
+
+      if (randomPrompt) {
+        // If mixing with local prompts, randomly choose between random and local
+        if (this.plugin.settings.randomPrompts.mixWithLocal) {
+          const allPrompts = [...this.prompts];
+          if (allPrompts.length > 0) {
+            // 50% chance to use random prompt, 50% for local prompts
+            if (Math.random() < 0.5) {
+              return randomPrompt;
+            } else {
+              const randomIndex = Math.floor(Math.random() * allPrompts.length);
+              return allPrompts[randomIndex];
+            }
+          }
+        }
+        return randomPrompt;
+      }
+    }
+
+    // Fallback to local prompts
     if (this.prompts.length === 0) {
       return "What's on your mind today?";
     }
-    
+
     const randomIndex = Math.floor(Math.random() * this.prompts.length);
     return this.prompts[randomIndex];
   }
 
-  getTemplate(id: string): Template | undefined {
-    return this.templates.get(id);
-  }
-
-  getAllTemplates(): Template[] {
-    return Array.from(this.templates.values());
-  }
-
-  async reloadTemplates() {
-    this.templates.clear();
-    await this.loadTemplates();
+  getDefaultTemplate(): { title: string; content: string } {
+    return {
+      title: this.plugin.settings.defaultTitlePattern,
+      content: this.plugin.settings.defaultTemplate
+    };
   }
 
   async reloadPrompts() {

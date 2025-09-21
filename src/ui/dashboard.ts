@@ -1,13 +1,13 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import type { DashboardStats } from '../types/interfaces';
-import type WritingMomentumPlugin from '../../main';
+import type { IWritingMomentumPlugin } from '../types/plugin-interface';
 
 export const VIEW_TYPE_WRITING_DASHBOARD = 'writing-momentum-dashboard';
 
 export class WritingDashboard extends ItemView {
-  private plugin: WritingMomentumPlugin;
+  private plugin: IWritingMomentumPlugin;
 
-  constructor(leaf: WorkspaceLeaf, plugin: WritingMomentumPlugin) {
+  constructor(leaf: WorkspaceLeaf, plugin: IWritingMomentumPlugin) {
     super(leaf);
     this.plugin = plugin;
   }
@@ -38,7 +38,10 @@ export class WritingDashboard extends ItemView {
     container.addClass('writing-momentum-dashboard');
 
     this.renderHeader(container);
+    this.renderWritingMode(container);
+    this.renderTopCompleteButton(container);
     this.renderCurrentSession(container);
+    this.renderContinuousWriting(container);
     this.renderTodayStats(container);
     this.renderStreak(container);
     this.renderWeeklyProgress(container);
@@ -48,13 +51,80 @@ export class WritingDashboard extends ItemView {
 
   private renderHeader(container: Element) {
     const header = container.createEl('div', { cls: 'dashboard-header' });
-    header.createEl('h2', { text: '✍️ Writing Dashboard', cls: 'dashboard-title' });
-    
-    const refreshBtn = header.createEl('button', { 
-      text: '🔄 Refresh',
+    header.createEl('h2', { text: 'Writing Dashboard', cls: 'dashboard-title' });
+
+    const refreshBtn = header.createEl('button', {
+      text: 'Refresh',
       cls: 'dashboard-refresh-btn'
     });
     refreshBtn.onclick = () => this.render();
+  }
+
+  private renderWritingMode(container: Element) {
+    const currentSession = this.plugin.sessionManager.getCurrentSession();
+
+    if (currentSession) {
+      return; // Don't show Writing Mode section when session is active
+    }
+
+    const modeSection = container.createEl('div', { cls: 'dashboard-section writing-mode' });
+    modeSection.createEl('h3', { text: '✍️ Writing Mode' });
+
+    const modeGrid = modeSection.createEl('div', { cls: 'writing-mode-grid' });
+
+    // Quick Start option
+    const quickStartCard = modeGrid.createEl('div', { cls: 'mode-card quick-start-card' });
+    quickStartCard.createEl('div', { text: '⚡', cls: 'mode-icon' });
+    quickStartCard.createEl('div', { text: 'Quick Start', cls: 'mode-title' });
+    quickStartCard.createEl('div', { text: 'Start writing immediately', cls: 'mode-description' });
+
+    const quickStartBtn = quickStartCard.createEl('button', { cls: 'mode-start-btn' });
+    quickStartBtn.createEl('span', { text: 'Ready', cls: 'btn-left-text' });
+    quickStartBtn.createEl('span', { text: 'Start Session', cls: 'btn-center-text' });
+    quickStartBtn.createEl('span', { text: 'Write', cls: 'btn-right-text' });
+
+    quickStartBtn.onclick = async () => {
+      await this.plugin.templateEngine.createNoteFromTemplate();
+    };
+
+    // Template option
+    const templateCard = modeGrid.createEl('div', { cls: 'mode-card template-card' });
+    templateCard.createEl('div', { text: '📝', cls: 'mode-icon' });
+    templateCard.createEl('div', { text: 'Template', cls: 'mode-title' });
+    templateCard.createEl('div', { text: 'Use structured template', cls: 'mode-description' });
+
+    const templateBtn = templateCard.createEl('button', { cls: 'mode-start-btn' });
+    templateBtn.createEl('span', { text: 'Focus', cls: 'btn-left-text' });
+    templateBtn.createEl('span', { text: 'Start Session', cls: 'btn-center-text' });
+    templateBtn.createEl('span', { text: 'Create', cls: 'btn-right-text' });
+
+    templateBtn.onclick = async () => {
+      await this.plugin.templateEngine.createNoteFromTemplate();
+    };
+  }
+
+  private renderTopCompleteButton(container: Element) {
+    const currentSession = this.plugin.sessionManager.getCurrentSession();
+    const buttonContainer = container.createEl('div', { cls: 'top-button-container' });
+
+    if (currentSession) {
+      const completeBtn = buttonContainer.createEl('button', {
+        text: 'Complete Session',
+        cls: 'top-complete-btn'
+      });
+      completeBtn.onclick = () => {
+        this.plugin.sessionManager.completeSession();
+        this.render();
+      };
+    } else {
+      const startBtn = buttonContainer.createEl('button', {
+        text: 'Start Session',
+        cls: 'top-start-btn'
+      });
+      startBtn.onclick = async () => {
+        await this.plugin.templateEngine.createNoteFromTemplate();
+      };
+    }
   }
 
   private renderCurrentSession(container: Element) {
@@ -78,18 +148,9 @@ export class WritingDashboard extends ItemView {
       }
 
       const actions = sessionEl.createEl('div', { cls: 'session-actions' });
-      
-      const completeBtn = actions.createEl('button', { 
-        text: '✅ Complete Session',
-        cls: 'session-btn complete-btn'
-      });
-      completeBtn.onclick = () => {
-        this.plugin.sessionManager.completeSession();
-        this.render();
-      };
 
-      const endBtn = actions.createEl('button', { 
-        text: '⏹️ End Session',
+      const endBtn = actions.createEl('button', {
+        text: 'End Session',
         cls: 'session-btn end-btn'
       });
       endBtn.onclick = () => {
@@ -97,7 +158,7 @@ export class WritingDashboard extends ItemView {
         this.render();
       };
     } else {
-      sessionEl.createEl('h3', { text: '💤 No Active Session' });
+      sessionEl.createEl('h3', { text: 'No Active Session' });
       sessionEl.createEl('p', { 
         text: 'Start writing from a reminder or use a template to begin tracking.',
         cls: 'no-session-message'
@@ -109,7 +170,7 @@ export class WritingDashboard extends ItemView {
     const stats = this.plugin.dataManager.getDashboardStats();
     const todayEl = container.createEl('div', { cls: 'dashboard-section today-stats' });
     
-    todayEl.createEl('h3', { text: '📅 Today\'s Progress' });
+    todayEl.createEl('h3', { text: 'Today\'s Progress' });
     
     const statsGrid = todayEl.createEl('div', { cls: 'stats-grid' });
     this.createStatCard(statsGrid, 'Words Today', stats.todayWordCount.toString(), '📝');
@@ -166,7 +227,7 @@ export class WritingDashboard extends ItemView {
 
   private renderWeeklyProgress(container: Element) {
     const progressEl = container.createEl('div', { cls: 'dashboard-section weekly-progress' });
-    progressEl.createEl('h3', { text: '📊 Weekly Overview' });
+    progressEl.createEl('h3', { text: 'Weekly Overview' });
     
     // This could be expanded to show a more detailed weekly breakdown
     const stats = this.plugin.dataManager.getDashboardStats();
@@ -184,43 +245,22 @@ export class WritingDashboard extends ItemView {
 
   private renderQuickActions(container: Element) {
     const actionsEl = container.createEl('div', { cls: 'dashboard-section quick-actions' });
-    actionsEl.createEl('h3', { text: '⚡ Quick Actions' });
-    
+    actionsEl.createEl('h3', { text: '⚡ Actions' });
+
     const buttonsEl = actionsEl.createEl('div', { cls: 'action-buttons' });
-    
-    const templates = this.plugin.templateEngine.getAllTemplates();
-    
-    for (const template of templates.slice(0, 3)) { // Show top 3 templates
-      const btn = buttonsEl.createEl('button', { 
-        text: `📝 ${template.name}`,
-        cls: 'action-btn template-btn'
-      });
-      btn.onclick = async () => {
-        try {
-          await this.plugin.templateEngine.createNoteFromTemplate(template.id);
-          this.render(); // Refresh dashboard
-        } catch (error) {
-          console.error('Failed to create note from template:', error);
-        }
-      };
-    }
 
-    // Add other quick actions
-    const quickNoteBtn = buttonsEl.createEl('button', { 
-      text: '📋 Quick Note',
-      cls: 'action-btn'
-    });
-    quickNoteBtn.onclick = () => this.plugin.createQuickNote();
-
-    const settingsBtn = buttonsEl.createEl('button', { 
+    const settingsBtn = buttonsEl.createEl('button', {
       text: '⚙️ Settings',
       cls: 'action-btn'
     });
     settingsBtn.onclick = () => {
-      // @ts-ignore
+      // @ts-ignore - This is the correct way to open Obsidian settings
       this.plugin.app.setting.open();
       // @ts-ignore
-      this.plugin.app.setting.openTabById('writing-momentum');
+      setTimeout(() => {
+        // @ts-ignore
+        this.plugin.app.setting.openTabById(this.plugin.manifest.id);
+      }, 100);
     };
   }
 
@@ -228,7 +268,7 @@ export class WritingDashboard extends ItemView {
     const stats = this.plugin.dataManager.getDashboardStats();
     const recentEl = container.createEl('div', { cls: 'dashboard-section recent-sessions' });
     
-    recentEl.createEl('h3', { text: '📋 Recent Sessions' });
+    recentEl.createEl('h3', { text: 'Recent Sessions' });
     
     if (stats.recentSessions.length === 0) {
       recentEl.createEl('p', { 
@@ -263,6 +303,85 @@ export class WritingDashboard extends ItemView {
           cls: `session-progress ${progress >= 100 ? 'completed' : ''}`
         });
       }
+    }
+  }
+
+  private renderContinuousWriting(container: Element) {
+    if (!this.plugin.settings.continuousWriting.enabled) {
+      return;
+    }
+
+    const section = container.createEl('div', { cls: 'dashboard-section continuous-writing' });
+    section.createEl('h3', { text: '🔥 Continuous Writing Mode' });
+
+    const currentCount = this.plugin.settings.continuousWriting.currentCount;
+    const targetCount = this.plugin.settings.continuousWriting.targetSessions;
+    const sessionDuration = this.plugin.settings.continuousWriting.sessionDuration;
+
+    // Progress overview
+    const progressOverview = section.createEl('div', { cls: 'continuous-progress-overview' });
+
+    const progressText = progressOverview.createEl('div', { cls: 'continuous-progress-text' });
+    progressText.createEl('span', {
+      text: `${currentCount} / ${targetCount}`,
+      cls: 'continuous-count'
+    });
+    progressText.createEl('span', {
+      text: ` sessions completed`,
+      cls: 'continuous-label'
+    });
+
+    const percentage = Math.round((currentCount / targetCount) * 100);
+    progressText.createEl('span', {
+      text: ` (${percentage}%)`,
+      cls: 'continuous-percentage'
+    });
+
+    // Progress bar
+    const progressBarContainer = progressOverview.createEl('div', { cls: 'continuous-progress-bar' });
+    const progressBar = progressBarContainer.createEl('div', {
+      cls: 'continuous-progress-fill',
+      attr: { style: `width: ${Math.min(percentage, 100)}%` }
+    });
+
+    // Session info
+    const sessionInfo = section.createEl('div', { cls: 'continuous-session-info' });
+    sessionInfo.createEl('p', {
+      text: `Target: ${sessionDuration} minutes per session`,
+      cls: 'session-duration-info'
+    });
+
+    // Action buttons
+    const actions = section.createEl('div', { cls: 'continuous-actions' });
+
+    const startBtn = actions.createEl('button', {
+      text: '🚀 Start Continuous Session',
+      cls: 'action-btn continuous-start-btn'
+    });
+    startBtn.onclick = async () => {
+      await this.plugin.templateEngine.createNoteFromTemplate();
+    };
+
+    if (currentCount > 0) {
+      const resetBtn = actions.createEl('button', {
+        text: '🔄 Reset Progress',
+        cls: 'action-btn continuous-reset-btn'
+      });
+      resetBtn.onclick = async () => {
+        this.plugin.settings.continuousWriting.currentCount = 0;
+        await this.plugin.saveSettings();
+        this.render();
+      };
+    }
+
+    // Achievement check
+    if (currentCount >= targetCount) {
+      const achievementEl = section.createEl('div', { cls: 'continuous-achievement' });
+      achievementEl.createEl('div', { text: '🎉', cls: 'achievement-icon' });
+      achievementEl.createEl('div', {
+        text: `Congratulations! You've completed ${targetCount} continuous sessions!`,
+        cls: 'achievement-text'
+      });
     }
   }
 

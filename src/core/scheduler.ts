@@ -1,13 +1,13 @@
 import { Notice } from 'obsidian';
 import type { ReminderConfig } from '../types/interfaces';
-import type WritingMomentumPlugin from '../../main';
+import type { IWritingMomentumPlugin } from '../types/plugin-interface';
 
 export class ReminderScheduler {
-  private plugin: WritingMomentumPlugin;
+  private plugin: IWritingMomentumPlugin;
   private scheduledReminders: Map<string, number> = new Map();
   private snoozeQueue: Map<string, number> = new Map();
 
-  constructor(plugin: WritingMomentumPlugin) {
+  constructor(plugin: IWritingMomentumPlugin) {
     this.plugin = plugin;
   }
 
@@ -117,11 +117,7 @@ export class ReminderScheduler {
 
   private async handleReminderClick(reminder: ReminderConfig) {
     try {
-      if (reminder.templateId) {
-        await this.plugin.templateEngine.createNoteFromTemplate(reminder.templateId);
-      } else {
-        await this.plugin.createQuickNote();
-      }
+      await this.plugin.templateEngine.createNoteFromTemplate();
     } catch (error) {
       console.error('Failed to create note from reminder:', error);
       new Notice('Failed to create writing note. Please try again.');

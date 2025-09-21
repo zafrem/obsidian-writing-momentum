@@ -1,8 +1,8 @@
 import type { WritingSession, StreakData, DashboardStats } from '../types/interfaces';
-import type WritingMomentumPlugin from '../../main';
+import type { IWritingMomentumPlugin } from '../types/plugin-interface';
 
 export class DataManager {
-  private plugin: WritingMomentumPlugin;
+  private plugin: IWritingMomentumPlugin;
   private sessions: WritingSession[] = [];
   private streak: StreakData = {
     current: 0,
@@ -12,7 +12,7 @@ export class DataManager {
     weeklyProgress: []
   };
 
-  constructor(plugin: WritingMomentumPlugin) {
+  constructor(plugin: IWritingMomentumPlugin) {
     this.plugin = plugin;
   }
 
@@ -175,11 +175,30 @@ export class DataManager {
 
     const target = this.plugin.settings.streakRule.target;
     
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const lastWeekChecked = this.streak.lastWritingDay;
+    
     if (completedDays >= target) {
-      // Week goal achieved
-      if (this.streak.lastWritingDay !== weekStart.toISOString().split('T')[0]) {
+      // Week goal achieved - only increment if we haven't counted this week yet
+      if (lastWeekChecked !== weekStartStr) {
         this.streak.current++;
-        this.streak.lastWritingDay = weekStart.toISOString().split('T')[0];
+        this.streak.lastWritingDay = weekStartStr;
+        
+        if (this.streak.current > this.streak.longest) {
+          this.streak.longest = this.streak.current;
+        }
+      }
+    } else {
+      // Week goal not achieved - check if we need to break streak
+      const today = new Date().toISOString().split('T')[0];
+      const endOfWeek = new Date(weekStart);
+      endOfWeek.setDate(endOfWeek.getDate() + 6);
+      
+      if (today > endOfWeek.toISOString().split('T')[0] && lastWeekChecked !== weekStartStr) {
+        // Week is over and goal wasn't met
+        this.streak.current = 0;
+        this.streak.graceUsed = 0;
+        this.streak.lastWritingDay = weekStartStr;
       }
     }
     

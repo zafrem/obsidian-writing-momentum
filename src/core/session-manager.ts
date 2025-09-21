@@ -1,14 +1,14 @@
 import { TFile, Notice } from 'obsidian';
 import type { WritingSession } from '../types/interfaces';
-import type WritingMomentumPlugin from '../../main';
+import type { IWritingMomentumPlugin } from '../types/plugin-interface';
 
 export class SessionManager {
-  private plugin: WritingMomentumPlugin;
+  private plugin: IWritingMomentumPlugin;
   private currentSession: WritingSession | null = null;
   private wordCountInterval: number | null = null;
-  private sessionStartContent = '';
+  private sessionStartContent: Map<string, string> = new Map();
 
-  constructor(plugin: WritingMomentumPlugin) {
+  constructor(plugin: IWritingMomentumPlugin) {
     this.plugin = plugin;
   }
 
@@ -49,11 +49,12 @@ export class SessionManager {
     try {
       const file = this.plugin.app.vault.getAbstractFileByPath(filePath);
       if (file instanceof TFile) {
-        this.sessionStartContent = await this.plugin.app.vault.read(file);
+        const content = await this.plugin.app.vault.read(file);
+        this.sessionStartContent.set(filePath, content);
       }
     } catch (error) {
       console.error('Failed to capture initial content:', error);
-      this.sessionStartContent = '';
+      this.sessionStartContent.set(filePath, '');
     }
   }
 
@@ -80,7 +81,8 @@ export class SessionManager {
       if (file instanceof TFile) {
         try {
           const currentContent = await this.plugin.app.vault.read(file);
-          const newWords = this.calculateNewWords(this.sessionStartContent, currentContent);
+          const initialContent = this.sessionStartContent.get(filePath) || '';
+          const newWords = this.calculateNewWords(initialContent, currentContent);
           totalNewWords += newWords;
         } catch (error) {
           console.error(`Failed to read file ${filePath}:`, error);
@@ -121,10 +123,41 @@ export class SessionManager {
     // Save session
     this.plugin.dataManager.addSession(this.currentSession);
 
+    // Update continuous writing counter if enabled
+    if (this.plugin.settings.continuousWriting.enabled) {
+      const duration = Math.round((Date.now() - this.currentSession.startTime) / 60000);
+      const targetDuration = this.plugin.settings.continuousWriting.sessionDuration;
+
+      // Only count if session met minimum duration requirement
+      if (duration >= targetDuration) {
+        this.plugin.settings.continuousWriting.currentCount++;
+        this.plugin.saveSettings();
+
+        // Check for achievement
+        if (this.plugin.settings.continuousWriting.currentCount >= this.plugin.settings.continuousWriting.targetSessions) {
+          if (this.plugin.settings.ui.notifications) {
+            new Notice(`🎉 Amazing! You've completed ${this.plugin.settings.continuousWriting.targetSessions} continuous sessions!`, 10000);
+          }
+        }
+      }
+    }
+
     // Show completion message
     if (this.plugin.settings.ui.notifications) {
       const duration = Math.round((Date.now() - this.currentSession.startTime) / 60000);
-      const message = `Great job! You wrote ${this.currentSession.wordCount} words in ${duration} minutes.`;
+      let message = `Great job! You wrote ${this.currentSession.wordCount} words in ${duration} minutes.`;
+
+      if (this.plugin.settings.continuousWriting.enabled) {
+        const currentCount = this.plugin.settings.continuousWriting.currentCount;
+        const targetDuration = this.plugin.settings.continuousWriting.sessionDuration;
+
+        if (duration >= targetDuration) {
+          message += ` Continuous session ${currentCount} completed! 🔥`;
+        } else {
+          message += ` (Need ${targetDuration}+ minutes for continuous progress)`;
+        }
+      }
+
       new Notice(message, 5000);
     }
 
@@ -138,7 +171,7 @@ export class SessionManager {
     }
 
     this.currentSession = null;
-    this.sessionStartContent = '';
+    this.sessionStartContent.clear();
 
     if (this.wordCountInterval) {
       window.clearInterval(this.wordCountInterval);
@@ -169,9 +202,10 @@ export class SessionManager {
     return this.currentSession;
   }
 
-  addFileToCurrentSession(filePath: string) {
+  async addFileToCurrentSession(filePath: string) {
     if (this.currentSession && !this.currentSession.files.includes(filePath)) {
       this.currentSession.files.push(filePath);
+      await this.captureInitialContent(filePath);
     }
   }
 
@@ -217,11 +251,11 @@ export class SessionManager {
   }
 
   // Auto-session management for file tracking
-  handleFileOpen(file: TFile) {
+  async handleFileOpen(file: TFile) {
     if (this.shouldAutoStartSession(file)) {
       this.startSession(file.path);
     } else if (this.currentSession && !this.currentSession.files.includes(file.path)) {
-      this.addFileToCurrentSession(file.path);
+      await this.addFileToCurrentSession(file.path);
     }
   }
 

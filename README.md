@@ -1,352 +1,259 @@
 # Writing Momentum - Obsidian Plugin
 
-> **Goal:** An Obsidian plugin that helps users write consistently. Focused on reminders and templates. Minimal friction, maximum persistence.
+> **Goal:** An Obsidian plugin that helps users write consistently. Focused on session tracking and writing momentum. Minimal friction, maximum persistence.
 
-**Vision:** "5 minutes, 3 sentences a day" to build long-term habits
+**Vision:** "Start writing, track progress, build habits"
 
-## 🌟 Features
+## Features
 
-### ⏰ Smart Reminders
-- **Scheduled Reminders**: Daily/weekly reminders at your preferred times
-- **Click-to-Write**: Reminders open directly to your writing template
-- **Snooze Options**: 10-minute snooze for busy moments
-- **Do-Not-Disturb**: Quiet hours (e.g., 11:30 PM - 7:30 AM)
-- **Double Reminders**: Second notification if you miss the first one
+### Session Management
+- **Real-time Word Counting**: Track words as you write (updates every 5 seconds)
+- **Session Timer**: Monitor writing duration and calculate WPM
+- **Active Session Tracking**: Visual feedback in status bar and dashboard
+- **Session Controls**: Start, complete, or end sessions with one click
+- **Auto-session Detection**: Prompts to start sessions in writing folders
 
-### 📝 Template System
-- **Pre-built Templates**: Daily journal, blog outline, fiction scenes
-- **Variable Substitution**: 
-  - `{{date}}` - Current date (2025-09-07)
-  - `{{time}}` - Current time (9:00 PM)
-  - `{{weekday}}` - Day of week (Monday)
-  - `{{random_prompt}}` - Random writing prompt
-  - `{{vault}}` - Current vault name
-- **Smart File Naming**: Auto-generates filenames like "2025-09-07 Daily.md"
-- **Auto Organization**: Templates specify target folders
+### Writing Dashboard
+- **Current Session Display**: Live word count, duration, and active file
+- **Progress Overview**: Today's writing statistics and session info
+- **Quick Actions**: Start sessions and create quick notes instantly
+- **Real-time Updates**: Refresh to see latest progress
+- **Beautiful UI**: Clean, responsive design with dark/light theme support
 
-### 🔥 Streak Tracking
-- **Flexible Modes**: Daily streaks or weekly goals (e.g., 5 days/week)
-- **Grace Days**: Miss a day without breaking your streak (configurable)
-- **Visual Progress**: Weekly dots showing completed days
-- **Longest Streak**: Track your personal best
-- **Real-time Updates**: Streak updates as you write
-
-### 📊 Writing Dashboard
-- **Current Session**: Real-time word count, duration, WPM
-- **Progress Stats**: Today/week/month word counts
-- **Streak Visualization**: Current and longest streaks with weekly view
-- **Quick Actions**: One-click template creation
-- **Recent History**: Last 7 sessions with completion rates
-
-### ⚡ Workflow Integration
+### Workflow Integration
+- **Ribbon Icon**: One-click access to dashboard
 - **Command Palette**: All features accessible via Ctrl/Cmd+P
-- **Status Bar**: Shows current progress or session stats
-- **Auto Sessions**: Automatically tracks writing when you open notes
-- **Session Management**: Start, pause, complete, or end sessions
+- **Status Bar**: Shows current session stats or daily progress
+- **Quick Notes**: Auto-generates timestamped notes with prompts
+- **Folder Detection**: Auto-detects writing in journal, blog, writing, drafts folders
 
-## 🚀 Getting Started
+### Customizable Settings
+- **UI Controls**: Toggle status bar, ribbon icon, and notifications
+- **Reminder Configuration**: Set daily reminder times
+- **File Organization**: Configure template and prompt file locations
+- **Notification Preferences**: Control session start/complete messages
+
+## Getting Started
 
 ### Installation
 
 1. **Manual Installation**:
-   - Download the latest release files
+   - Download the latest release files (`main.js`, `manifest.json`, `styles.css`)
    - Copy to `.obsidian/plugins/writing-momentum/`
    - Enable in Settings > Community Plugins
 
-2. **BRAT Installation** (recommended for beta):
+2. **BRAT Installation** (for development versions):
    - Install BRAT plugin
-   - Add repository URL
+   - Add repository URL: `https://github.com/zafrem/obsidian-writing-momentum`
    - Install and enable
 
-### First Setup
+### First Use
 
-1. **Open Dashboard**: Click ribbon icon or use Command Palette → "Open Writing Dashboard"
-2. **Configure Reminders**: Settings → Writing Momentum → Set your preferred reminder time
-3. **Choose Streak Mode**: Daily or weekly goals (default: 5 days/week)
-4. **Create First Note**: Use Command Palette → "New note from template"
+1. **Enable Plugin**: Settings → Community Plugins → Writing Momentum (toggle on)
+2. **Open Dashboard**: Click the target icon in the left ribbon
+3. **Start Writing**: Open any markdown file and click "🚀 Start Session"
+4. **Track Progress**: Watch word count update in real-time in status bar
 
-## 📖 Usage Guide
+## Usage Guide
 
-### Daily Workflow
+### Basic Workflow
 
-1. **Get Reminded**: Notification appears at your set time
-2. **Click to Write**: Reminder opens template with today's prompt
-3. **Write**: Aim for 3 sentences minimum (or your goal)
-4. **Complete**: Use dashboard button or let auto-complete when target reached
-5. **Track Progress**: View stats and maintain streak
+1. **Open a markdown file** (or create a new one)
+2. **Start a session**:
+   - Click ribbon icon → Dashboard → "🚀 Start Session"
+   - Or use Command Palette → "Start Writing Session"
+   - Or sessions auto-prompt in writing folders
+3. **Write content** - word count updates every 5 seconds
+4. **Complete session** when done:
+   - Dashboard → "✅ Complete Session"
+   - Or Command Palette → "Complete Writing Session"
+5. **View progress** in status bar and dashboard
 
-### Templates
+### Auto-Session Detection
 
-#### Default Templates
+The plugin automatically prompts to start sessions when opening files in these folders:
+- `journal/` - Daily journaling
+- `writing/` - Creative writing projects
+- `blog/` - Blog posts and articles
+- `drafts/` - Draft documents
 
-**Daily 3-Lines** (`daily-3lines.md`):
-```markdown
----
-title: "{{date}}"
-type: daily
-tags: [journal, daily]
----
-{{random_prompt}}
+### Quick Notes
 
-- Line 1
-- Line 2  
-- Line 3
-```
+Create instant writing notes with:
+- **Command**: "Create Quick Note"
+- **Format**: `YYYY-MM-DD Quick Note HH:MM.md`
+- **Content**: Pre-filled with date, time, and writing prompt
+- **Auto-session**: Automatically starts tracking after creation
 
-**Blog Outline** (`blog-outline.md`):
-```markdown
----
-title: "{{date}} {{topic}} Draft"
-type: blog
-tags: [blog, draft]
----
-# Introduction
-{{random_prompt}}
+## Available Commands
 
-## Body
-- Key Idea 1
-- Key Idea 2
+Access these via Command Palette (Ctrl/Cmd + P):
 
-## Conclusion
-- Summary & Next action
-```
+| Command | Description | When to Use |
+|---------|-------------|-------------|
+| **Open Writing Dashboard** | View current session and progress | Check progress, start/complete sessions |
+| **Start Writing Session** | Begin tracking current file | When ready to start focused writing |
+| **Complete Writing Session** | Mark current session as finished | When you've reached your writing goal |
+| **Create Quick Note** | Generate timestamped note with prompt | Quick journaling or idea capture |
 
-**Fiction Scene** (`fiction-scene.md`):
-```markdown
----
-title: "Scene - {{date}}"
-type: fiction
-tags: [novel, scene]
----
-## Scene Goal
-{{random_prompt}}
+*Custom hotkeys can be assigned in Obsidian's Settings → Hotkeys*
 
-## Characters
-- Protagonist:
-- Other:
+## Configuration
 
-## Conflict/Turn
-- Obstacle:
-- Twist:
-```
+### Settings Panel
 
-#### Custom Templates
+Access via Settings → Writing Momentum:
 
-Create templates in `.writing-momentum/templates/`:
+** Reminders**
+- **Reminder Time**: Set daily reminder time (format: HH:MM)
+- Default: 21:00 (9:00 PM)
 
-```markdown
----
-name: My Custom Template
-category: custom
-description: Your template description
-filePaths:
-  pattern: "{{date}} - {{title}}.md"
-  folder: "MyWriting"
----
-Your template content with {{variables}}
-```
+** Interface**
+- **Show Status Bar**: Display writing progress in bottom status bar
+- **Show Ribbon Icon**: Display plugin icon in left sidebar ribbon
+- **Enable Notifications**: Show session start/complete messages
 
-### Writing Prompts
+** File Paths**
+- **Templates Folder**: Location for future template files
+- **Prompts File**: File containing writing prompts for quick notes
 
-Default prompts in `.writing-momentum/prompts.md`:
+### Status Bar Display
 
-```markdown
-# Writing Prompts
+When **enabled**, shows:
+- **During Session**: `✍️ 45 words (12m)` (live word count and duration)
+- **No Active Session**: `📝 Ready to write` (idle state)
 
-- What was the most meaningful moment today?
-- What did I learn today?
-- Express your current feeling in one word.
-- What am I grateful for right now?
-- What challenge did I overcome today?
-```
+## Dashboard Features
 
-Add your own prompts to this file - one per line with `- ` prefix.
+### Current Session Section
+- **Live Statistics**: Word count, writing duration
+- **File Information**: Currently tracked file name
+- **Session Controls**: Complete or end session buttons
+- **No Session State**: Helpful message with instructions
 
-## ⚙️ Configuration
+### Quick Actions
+- **🚀 Start Session**: Begin tracking current file
+- **📝 Quick Note**: Create new timestamped note
 
-### Reminder Settings
+### Today's Progress
+- **Session Status**: Shows if session is active with start time
+- **Helpful Tips**: Usage guidance and folder detection info
 
-- **Default Time**: 21:00 (9:00 PM)
-- **Days**: All days (can customize per reminder)
-- **Double Reminder**: 30 minutes after first missed
-- **Do-Not-Disturb**: 23:30 - 07:30 (customizable)
+## Technical Details
 
-### Streak Settings
+### Word Counting
+- **Updates**: Every 5 seconds during active sessions
+- **Accuracy**: Excludes YAML frontmatter from count
+- **Method**: Splits on whitespace, filters empty strings
+- **Performance**: Minimal impact on Obsidian performance
 
-- **Mode**: 
-  - Daily: Write every day
-  - Weekly: Hit target days per week (recommended)
-- **Weekly Target**: 5 days (adjustable 1-7)
-- **Grace Days**: 1 day forgiveness (adjustable 0-3)
+### Data Storage
+- **Location**: `.obsidian/plugins/writing-momentum/data.json`
+- **Content**: Plugin settings only (no writing content stored)
+- **Privacy**: All data remains local to your device
+- **Sync**: Compatible with Obsidian Sync
 
-### File Paths
+### Session Logic
+- **Single Session**: Only one active session at a time
+- **File Tracking**: Sessions track specific file paths
+- **Auto-cleanup**: Sessions end when plugin unloads
+- **Error Handling**: Graceful handling of file read errors
 
-- **Templates**: `.writing-momentum/templates/`
-- **Prompts**: `.writing-momentum/prompts.md`
-- Both paths are customizable in settings
-
-## 🎯 Commands
-
-| Command | Description | Shortcut |
-|---------|-------------|----------|
-| Open Writing Dashboard | View stats and progress | - |
-| New note from template | Create note using template | - |
-| Create quick note | Fast note with random prompt | - |
-| Complete writing session | Mark current session done | - |
-| Insert random prompt | Add prompt to current note | - |
-| Snooze reminder | 10-minute reminder delay | - |
-
-*Shortcuts can be customized in Obsidian's Hotkeys settings*
-
-## 📊 Data & Privacy
-
-### Local Storage
-- All data stored locally in `.obsidian/plugins/writing-momentum/data.json`
-- No external servers or accounts required
-- Compatible with Obsidian Sync for cross-device sync
-
-### Data Export
-- Export sessions and streak data via Settings
-- JSON format for backup or analysis
-- Import capability for data migration
-
-### What's Tracked
-- Writing sessions (date, duration, word count)
-- Streak statistics (current, longest, weekly progress)
-- Template usage and completion rates
-- No content is stored - only metadata
-
-## 🛠️ Advanced Usage
-
-### Multiple Reminders
-```json
-{
-  "reminders": [
-    {
-      "id": "morning",
-      "time": "08:00",
-      "days": [1,2,3,4,5],
-      "templateId": "daily-3lines"
-    },
-    {
-      "id": "evening", 
-      "time": "21:00",
-      "days": [0,1,2,3,4,5,6],
-      "templateId": "reflection"
-    }
-  ]
-}
-```
-
-### Custom File Naming
-Template frontmatter supports:
-```yaml
-filePaths:
-  pattern: "{{date}} - {{mood}} Journal.md"
-  folder: "Daily/{{weekday}}"
-```
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
-**Reminders not appearing**:
-- Check if notifications are enabled in browser/OS
-- Verify reminder time isn't in do-not-disturb period
-- Restart Obsidian after changing settings
+**Plugin doesn't load**:
+- Check browser console (F12) for error messages
+- Ensure all files (main.js, manifest.json, styles.css) are present
+- Try disabling/re-enabling the plugin
 
-**Templates not found**:
-- Ensure templates folder exists: `.writing-momentum/templates/`
-- Check template file extension is `.md`
-- Verify template syntax and frontmatter
+**Word count not updating**:
+- Ensure session is active (check status bar)
+- Verify file is saved and readable
+- Check console for file access errors
 
-**Streak not updating**:
-- Write at least 1 word and complete session
-- Check streak mode settings (daily vs weekly)
-- Verify date/time settings are correct
+**Sessions not starting**:
+- Ensure a markdown file is open and active
+- Check that file path is accessible
+- Try manually starting via Command Palette
 
-**Word count issues**:
-- Word count excludes frontmatter
-- Only counts completed sessions
-- Auto-saves every 5 seconds during sessions
+**Status bar not showing**:
+- Enable in plugin settings: "Show Status Bar"
+- Restart Obsidian after changing setting
+- Check if other plugins are conflicting
 
 ### Performance
 
-**Plugin runs slowly**:
-- Reduce reminder frequency
-- Limit prompt file size
-- Clear old session data via export/import
+**For large vaults**:
+- Auto-session detection only checks folder names
+- Word counting only runs during active sessions
+- No background processing when sessions aren't active
 
-**High memory usage**:
-- Large vaults: disable auto-session detection
-- Limit tracked folders in settings
-- Restart Obsidian periodically
+## Version History
 
-## 🔄 Updates & Roadmap
-
-### Version 1.0.0 Features
-✅ Daily/weekly reminders with snooze  
-✅ Template system with variable substitution    
-✅ Flexible streak tracking with grace days  
-✅ Beautiful dashboard with real-time stats  
-✅ Session management and word counting  
-✅ Data export and local storage  
-✅ Mobile compatibility  
+### Current Version (1.0.0)
+**Core Features Implemented:**
+- Real-time session tracking and word counting
+- Beautiful dashboard with live statistics  
+- Command palette integration
+- Settings panel with full customization
+- Status bar integration
+- Auto-session detection for writing folders
+- Quick note creation with timestamps
 
 ### Planned Features (v1.1+)
-🔄 Calendar integration for reminders  
-🔄 Voice-to-text input support    
-🔄 AI-assisted prompt generation  
-🔄 Weekly/monthly summary reports  
-🔄 Integration with task management plugins  
-🔄 Advanced template conditionals and loops  
-🔄 Custom CSS themes for dashboard  
-🔄 Plugin API for third-party integrations  
+**Session History**: Track multiple sessions over time  
+**Streak Tracking**: Daily/weekly writing streaks  
+**Template System**: Customizable writing templates  
+**Reminders**: Scheduled writing reminders  
+**Data Export**: Export session data for analysis  
+**Advanced Statistics**: Weekly/monthly progress reports  
 
-## 🤝 Contributing
+## Contributing
 
-### Feedback & Issues
-- GitHub Issues: Report bugs and request features
-- Community: Share templates and workflows
-- Documentation: Help improve this guide
+### Feedback & Bug Reports
+- **GitHub Issues**: [Report bugs or request features](https://github.com/zafrem/obsidian-writing-momentum/issues)
+- **Community**: Share your workflows and suggestions
 
-### Development
+### Development Setup
 ```bash
 # Clone repository
 git clone https://github.com/zafrem/obsidian-writing-momentum
+cd obsidian-writing-momentum
 
 # Install dependencies  
 npm install
 
-# Development build with hot reload
+# Development build (builds automatically on changes)
 npm run dev
 
 # Production build
 npm run build
-
-# Run tests
-npm test
 ```
 
-### Template Contributions
-Share your templates by creating issues with:
-- Template markdown file
-- Use case description
-- Screenshot of result
-
-## 📜 License
+## License
 
 MIT License - see LICENSE file for details.
 
-## 🙏 Credits
+## Credits
 
-- Inspired by Don't Break the Chain methodology
-- Built with Obsidian Plugin API
-- Icons from Lucide Icons
-- Streak visualization inspired by GitHub contributions
+- Built with [Obsidian Plugin API](https://github.com/obsidianmd/obsidian-api)
+- Inspired by writing habit methodologies
+- Icons and UI elements follow Obsidian design patterns
 
 ---
 
-**Happy Writing! 🎉**
+## Quick Start Checklist
 
-*Build the habit, one sentence at a time.*
+- [ ] Install and enable plugin
+- [ ] Click target icon in ribbon to open dashboard  
+- [ ] Open a markdown file
+- [ ] Click "🚀 Start Session" 
+- [ ] Write and watch word count update
+- [ ] Click "✅ Complete Session" when done
+- [ ] Customize settings as needed
+
+**Happy Writing! ✍️**
+
+*Build momentum, one word at a time.*

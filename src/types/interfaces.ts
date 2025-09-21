@@ -3,8 +3,20 @@ export interface WritingMomentumSettings {
   streakRule: StreakRule;
   locale: string;
   dateFormat: string;
+  defaultTitlePattern: string;
+  defaultTemplate: string;
+  continuousWriting: {
+    enabled: boolean;
+    targetSessions: number;
+    currentCount: number;
+    sessionDuration: number; // minutes
+  };
+  randomPrompts: {
+    enabled: boolean;
+    mixWithLocal: boolean;
+    autoRefresh: boolean;
+  };
   paths: {
-    templates: string;
     prompts: string;
   };
   ui: {
@@ -113,8 +125,20 @@ export const DEFAULT_SETTINGS: WritingMomentumSettings = {
   },
   locale: 'en',
   dateFormat: 'YYYY-MM-DD',
+  defaultTitlePattern: '{{date}} - Writing Session',
+  defaultTemplate: '# {{title}}\n\n## Prompt\n{{random_prompt}}\n\n## Writing\n\n\n---\n*Written on {{weekday}} at {{time}}*',
+  continuousWriting: {
+    enabled: false,
+    targetSessions: 30,
+    currentCount: 0,
+    sessionDuration: 25
+  },
+  randomPrompts: {
+    enabled: false,
+    mixWithLocal: true,
+    autoRefresh: true
+  },
   paths: {
-    templates: '.writing-momentum/templates',
     prompts: '.writing-momentum/prompts.md'
   },
   ui: {
