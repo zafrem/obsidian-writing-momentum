@@ -271,7 +271,7 @@ export class DataManager {
     };
   }
 
-  async importData(data: any) {
+  async importData(data: Record<string, any>) {
     if (data.sessions) {
       this.sessions = [...this.sessions, ...data.sessions];
     }

@@ -1333,3 +1333,134 @@
   font-size: 1.1em;
 }
 
+/* Modal styles to replace inline CSS */
+.template-modal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.template-selection-dialog {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.template-selection-dialog h2 {
+  margin-top: 0;
+  color: var(--text-accent);
+}
+
+.template-selection-dialog p {
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.template-selection-dialog .template-options {
+  margin-bottom: 20px;
+}
+
+.template-option {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--background-secondary);
+}
+
+.template-option:hover {
+  border-color: var(--interactive-accent);
+  background-color: var(--background-primary);
+}
+
+.template-option h3 {
+  margin: 0 0 8px 0;
+  color: var(--text-accent);
+}
+
+.template-option p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+.template-dialog-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+.template-dialog-buttons button {
+  padding: 8px 16px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Dynamic bar height styles */
+.bar-height-0 { height: 2%; }
+.bar-height-5 { height: 5%; }
+.bar-height-10 { height: 10%; }
+.bar-height-15 { height: 15%; }
+.bar-height-20 { height: 20%; }
+.bar-height-25 { height: 25%; }
+.bar-height-30 { height: 30%; }
+.bar-height-35 { height: 35%; }
+.bar-height-40 { height: 40%; }
+.bar-height-45 { height: 45%; }
+.bar-height-50 { height: 50%; }
+.bar-height-55 { height: 55%; }
+.bar-height-60 { height: 60%; }
+.bar-height-65 { height: 65%; }
+.bar-height-70 { height: 70%; }
+.bar-height-75 { height: 75%; }
+.bar-height-80 { height: 80%; }
+.bar-height-85 { height: 85%; }
+.bar-height-90 { height: 90%; }
+.bar-height-95 { height: 95%; }
+.bar-height-100 { height: 100%; }
+
+/* Dynamic width styles for progress bars */
+.width-0 { width: 0%; }
+.width-5 { width: 5%; }
+.width-10 { width: 10%; }
+.width-15 { width: 15%; }
+.width-20 { width: 20%; }
+.width-25 { width: 25%; }
+.width-30 { width: 30%; }
+.width-35 { width: 35%; }
+.width-40 { width: 40%; }
+.width-45 { width: 45%; }
+.width-50 { width: 50%; }
+.width-55 { width: 55%; }
+.width-60 { width: 60%; }
+.width-65 { width: 65%; }
+.width-70 { width: 70%; }
+.width-75 { width: 75%; }
+.width-80 { width: 80%; }
+.width-85 { width: 85%; }
+.width-90 { width: 90%; }
+.width-95 { width: 95%; }
+.width-100 { width: 100%; }
+
+/* Clickable notice style */
+.clickable-notice {
+  cursor: pointer;
+}
+

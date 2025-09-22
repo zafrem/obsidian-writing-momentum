@@ -113,10 +113,13 @@ export class TemplateEngine {
     } catch (error) {
       if (error.message.includes('already exists')) {
         // File exists, open it instead
-        const existingFile = this.plugin.app.vault.getAbstractFileByPath(fileName) as TFile;
-        const leaf = this.plugin.app.workspace.getLeaf();
-        await leaf.openFile(existingFile);
-        return existingFile;
+        const existingFile = this.plugin.app.vault.getAbstractFileByPath(fileName);
+        if (existingFile instanceof TFile) {
+          const leaf = this.plugin.app.workspace.getLeaf();
+          await leaf.openFile(existingFile);
+          return existingFile;
+        }
+        throw new Error('File exists but is not a valid file');
       }
       throw error;
     }

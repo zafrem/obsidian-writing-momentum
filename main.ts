@@ -1,65 +1,17 @@
 import { App, Plugin, PluginSettingTab, Setting, Notice, TFile, MarkdownView, ItemView, WorkspaceLeaf } from 'obsidian';
 import { NetworkPromptsService } from './src/core/network-prompts';
 
-interface WritingMomentumSettings {
-	reminderTime: string;
-	showStatusBar: boolean;
-	showRibbonIcon: boolean;
-	enableNotifications: boolean;
-	defaultTitlePattern: string;
-	defaultTemplate: string;
-	continuousWriting: {
-		enabled: boolean;
-		targetSessions: number;
-		currentCount: number;
-		sessionDuration: number;
-	};
-	promptsFile: string;
-	randomPrompts: {
-		enabled: boolean;
-		mixWithLocal: boolean;
-		autoRefresh: boolean;
-	};
-}
+// Core modules
+import { ReminderScheduler } from './src/core/scheduler';
+import { TemplateEngine } from './src/core/template-engine';
+import { DataManager } from './src/core/data-manager';
+import { SessionManager } from './src/core/session-manager';
 
-const DEFAULT_SETTINGS: WritingMomentumSettings = {
-	reminderTime: '21:00',
-	showStatusBar: true,
-	showRibbonIcon: true,
-	enableNotifications: true,
-	defaultTitlePattern: '{{date}} - Writing Session',
-	defaultTemplate: '# {{title}}\n\n## Prompt\n{{random_prompt}}\n\n## Writing\n\n\n---\n*Written on {{weekday}} at {{time}}*',
-	continuousWriting: {
-		enabled: false,
-		targetSessions: 30,
-		currentCount: 0,
-		sessionDuration: 25
-	},
-	promptsFile: '.writing-momentum/prompts.md',
-	randomPrompts: {
-		enabled: false,
-		mixWithLocal: true,
-		autoRefresh: true
-	}
-};
+// Types
+import type { WritingMomentumSettings, WritingSession } from './src/types/interfaces';
+import { DEFAULT_SETTINGS } from './src/types/interfaces';
 
-interface WritingSession {
-	id: string;
-	startTime: number;
-	endTime?: number;
-	wordCount: number;
-	targetCount?: number;
-	active: boolean;
-	paused: boolean;
-	pausedTime?: number;
-	totalPausedDuration: number; // Total time paused in milliseconds
-	filePath: string;
-	date: string; // YYYY-MM-DD format
-}
-
-interface SessionHistory {
-	sessions: WritingSession[];
-}
+// Remove duplicate interfaces - using imported ones from types/interfaces.ts
 
 const WRITING_PROMPTS = [
 	// Creative Questions
@@ -122,6 +74,10 @@ const QUICK_KEYWORDS = [
 
 export default class WritingMomentumPlugin extends Plugin {
 	settings: WritingMomentumSettings;
+	dataManager: DataManager;
+	templateEngine: TemplateEngine;
+	sessionManager: SessionManager;
+	reminderScheduler: ReminderScheduler;
 	statusBarItem: HTMLElement | null = null;
 	currentSession: WritingSession | null = null;
 	sessionHistory: WritingSession[] = []; // Made public for dashboard access
@@ -129,20 +85,28 @@ export default class WritingMomentumPlugin extends Plugin {
 	randomPrompts: NetworkPromptsService;
 
 	async onload() {
-		console.log('Writing Momentum Plugin: Loading...');
 
 		// Load settings and session history
 		await this.loadSettings();
 		await this.loadSessionHistory();
 
+		// Initialize core systems
+		this.dataManager = new DataManager(this);
+		this.templateEngine = new TemplateEngine(this);
+		this.sessionManager = new SessionManager(this);
+		this.reminderScheduler = new ReminderScheduler(this);
+
+		await this.dataManager.loadData();
+		await this.templateEngine.initialize();
+
 		// Initialize random prompts service
-		this.randomPrompts = new NetworkPromptsService(this as any);
+		this.randomPrompts = new NetworkPromptsService(this);
 
 		// Auto-refresh random prompts if enabled
 		if (this.settings.randomPrompts.enabled && this.settings.randomPrompts.autoRefresh) {
 			// Fetch prompts in background (don't await to avoid blocking startup)
-			this.randomPrompts.fetchNetworkPrompts().catch(error => {
-				console.log('Background random prompt fetch failed:', error);
+			this.randomPrompts.fetchNetworkPrompts().catch(() => {
+				// Background fetch failed - continue silently
 			});
 		}
 
@@ -153,14 +117,14 @@ export default class WritingMomentumPlugin extends Plugin {
 		);
 
 		// Add ribbon icon
-		if (this.settings.showRibbonIcon) {
+		if (this.settings.ui.showRibbonIcon) {
 			this.addRibbonIcon('target', 'Writing Momentum', () => {
 				this.openDashboard();
 			});
 		}
 
 		// Add status bar
-		if (this.settings.showStatusBar) {
+		if (this.settings.ui.showStatusBar) {
 			this.statusBarItem = this.addStatusBarItem();
 			this.updateStatusBar();
 		}
@@ -214,12 +178,10 @@ export default class WritingMomentumPlugin extends Plugin {
 			})
 		);
 
-		console.log('Writing Momentum Plugin: Loaded successfully!');
 	}
 
 	onunload() {
 		this.stopAllTimers();
-		console.log('Writing Momentum Plugin: Unloaded');
 	}
 
 	stopAllTimers() {
@@ -240,11 +202,8 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		// Complete any active sessions to stop their timers
 		if (this.currentSession && this.currentSession.active) {
-			console.log('Stopping active session due to timer shutdown');
 			this.completeSession();
 		}
-
-		console.log('All timers and alarms stopped');
 		// new Notice('All writing timers and alarms stopped');
 	}
 
@@ -346,7 +305,9 @@ export default class WritingMomentumPlugin extends Plugin {
 			paused: false,
 			totalPausedDuration: 0,
 			filePath: activeFile.path,
-			date: new Date().toISOString().split('T')[0]
+			date: new Date().toISOString().split('T')[0],
+			files: [activeFile.path],
+			completed: false
 		};
 
 		// Start monitoring word count
@@ -358,7 +319,6 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.updateStatusBar();
 		this.refreshDashboard();
-		console.log('Session started:', this.currentSession.id);
 	}
 
 	completeSession() {
@@ -421,8 +381,6 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		// Refresh dashboard to show updated continuous writing progress
 		this.refreshDashboard();
-
-		console.log('Session completed');
 	}
 
 	pauseSession() {
@@ -445,7 +403,6 @@ export default class WritingMomentumPlugin extends Plugin {
 		}
 
 		this.updateStatusBar();
-		console.log('Session paused:', this.currentSession.id);
 	}
 
 	resumeSession() {
@@ -456,7 +413,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		// Add the paused duration to total
 		if (this.currentSession.pausedTime) {
-			this.currentSession.totalPausedDuration += Date.now() - this.currentSession.pausedTime;
+			this.currentSession.totalPausedDuration! += Date.now() - this.currentSession.pausedTime;
 		}
 
 		this.currentSession.paused = false;
@@ -470,7 +427,6 @@ export default class WritingMomentumPlugin extends Plugin {
 		}
 
 		this.updateStatusBar();
-		console.log('Session resumed:', this.currentSession.id);
 	}
 
 	private startWordCountTracking() {
@@ -488,7 +444,7 @@ export default class WritingMomentumPlugin extends Plugin {
 	private async updateWordCount() {
 		if (!this.currentSession) return;
 
-		const file = this.app.vault.getAbstractFileByPath(this.currentSession.filePath);
+		const file = this.app.vault.getAbstractFileByPath(this.currentSession.filePath!);
 		if (file instanceof TFile) {
 			try {
 				const content = await this.app.vault.read(file);
@@ -496,7 +452,7 @@ export default class WritingMomentumPlugin extends Plugin {
 				this.currentSession.wordCount = wordCount;
 				this.updateStatusBar();
 			} catch (error) {
-				console.error('Failed to read file:', error);
+				// Failed to read file, continue silently
 			}
 		}
 	}
@@ -512,7 +468,7 @@ export default class WritingMomentumPlugin extends Plugin {
 		if (!this.statusBarItem) return;
 
 		if (this.currentSession && this.currentSession.active) {
-			let effectiveDuration = Date.now() - this.currentSession.startTime - this.currentSession.totalPausedDuration;
+			let effectiveDuration = Date.now() - this.currentSession.startTime - (this.currentSession.totalPausedDuration || 0);
 			
 			// If currently paused, don't include the current pause time
 			if (this.currentSession.paused && this.currentSession.pausedTime) {
@@ -567,7 +523,6 @@ export default class WritingMomentumPlugin extends Plugin {
 			// Auto-start session after a brief delay
 			setTimeout(() => this.startQuickSession(), 100);
 		} catch (error) {
-			console.error('Failed to create quick note:', error);
 			new Notice(`Failed to create quick note: ${error.message}`);
 		}
 	}
@@ -582,13 +537,9 @@ export default class WritingMomentumPlugin extends Plugin {
 		try {
 			// Process the title pattern
 			const title = this.processTemplate(selectedTemplate.title);
-			console.log('Debug - Title pattern:', selectedTemplate.title);
-			console.log('Debug - Processed title:', title);
 
 			// Process the template content
 			const content = this.processTemplate(selectedTemplate.template, title);
-			console.log('Debug - Template pattern:', selectedTemplate.template);
-			console.log('Debug - Final content:', content);
 
 			// Create safe file name (remove invalid characters)
 			const safeFileName = this.sanitizeFileName(title) + '.md';
@@ -618,7 +569,6 @@ export default class WritingMomentumPlugin extends Plugin {
 				// new Notice(`Session started with: ${file.name}`);
 			}
 		} catch (error) {
-			console.error('Failed to create template note and start session:', error);
 			new Notice(`Failed to create note: ${error.message}`);
 		}
 	}
@@ -659,81 +609,31 @@ export default class WritingMomentumPlugin extends Plugin {
 
 			// Create modal
 			const modal = document.createElement('div');
-			modal.className = 'modal-container';
-			modal.style.cssText = `
-				position: fixed;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				background: rgba(0, 0, 0, 0.5);
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				z-index: 1000;
-			`;
+			modal.className = 'template-modal-container';
 
 			const dialog = document.createElement('div');
 			dialog.className = 'template-selection-dialog';
-			dialog.style.cssText = `
-				background: var(--background-primary);
-				border: 1px solid var(--background-modifier-border);
-				border-radius: 12px;
-				padding: 24px;
-				max-width: 500px;
-				width: 90%;
-				max-height: 70vh;
-				overflow-y: auto;
-			`;
 
-			dialog.innerHTML = `
-				<h2 style="margin-top: 0; color: var(--text-accent);">Choose Writing Template</h2>
-				<p style="color: var(--text-muted); margin-bottom: 20px;">Select a template to start your writing session:</p>
-				<div class="template-options"></div>
-				<div style="display: flex; gap: 12px; margin-top: 20px; justify-content: flex-end;">
-					<button class="cancel-btn" style="padding: 8px 16px; border: 1px solid var(--background-modifier-border); background: var(--background-secondary); border-radius: 6px; cursor: pointer;">Cancel</button>
-				</div>
-			`;
-
-			const optionsContainer = dialog.querySelector('.template-options');
+			// Create header
+			const header = dialog.createEl('h2', { text: 'Choose Writing Template' });
+			const description = dialog.createEl('p', { text: 'Select a template to start your writing session:' });
+			const optionsContainer = dialog.createEl('div', { cls: 'template-options' });
+			const buttonsContainer = dialog.createEl('div', { cls: 'template-dialog-buttons' });
+			const cancelBtn = buttonsContainer.createEl('button', { text: 'Cancel', cls: 'cancel-btn' });
 
 			templates.forEach((template, index) => {
-				const option = document.createElement('div');
-				option.className = 'template-option';
-				option.style.cssText = `
-					border: 1px solid var(--background-modifier-border);
-					border-radius: 8px;
-					padding: 16px;
-					margin-bottom: 12px;
-					cursor: pointer;
-					transition: all 0.2s;
-					background: var(--background-secondary);
-				`;
+				const option = optionsContainer.createEl('div', { cls: 'template-option' });
 
-				option.innerHTML = `
-					<h3 style="margin: 0 0 8px 0; color: var(--text-accent);">${template.name}</h3>
-					<p style="margin: 0; color: var(--text-muted); font-size: 0.9em;">${template.description}</p>
-				`;
-
-				option.addEventListener('mouseenter', () => {
-					option.style.borderColor = 'var(--interactive-accent)';
-					option.style.backgroundColor = 'var(--background-primary)';
-				});
-
-				option.addEventListener('mouseleave', () => {
-					option.style.borderColor = 'var(--background-modifier-border)';
-					option.style.backgroundColor = 'var(--background-secondary)';
-				});
+				const templateName = option.createEl('h3', { text: template.name });
+				const templateDesc = option.createEl('p', { text: template.description });
 
 				option.addEventListener('click', () => {
 					document.body.removeChild(modal);
 					resolve(template);
 				});
-
-				optionsContainer?.appendChild(option);
 			});
 
-			dialog.querySelector('.cancel-btn')?.addEventListener('click', () => {
+			cancelBtn.addEventListener('click', () => {
 				document.body.removeChild(modal);
 				resolve(null);
 			});
@@ -984,7 +884,7 @@ class WritingMomentumSettingTab extends PluginSettingTab {
 			.setDesc('Daily writing reminder (HH:MM format)')
 			.addText(text => text
 				.setPlaceholder('21:00')
-				.setValue(this.plugin.settings.reminderTime)
+				.setValue(this.plugin.settings.reminderTime || '21:00')
 				.onChange(async (value) => {
 					this.plugin.settings.reminderTime = value;
 					await this.plugin.saveSettings();
@@ -995,7 +895,7 @@ class WritingMomentumSettingTab extends PluginSettingTab {
 			.setName('Show status bar')
 			.setDesc('Display writing progress in status bar')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showStatusBar)
+				.setValue(this.plugin.settings.showStatusBar || false)
 				.onChange(async (value) => {
 					this.plugin.settings.showStatusBar = value;
 					await this.plugin.saveSettings();
@@ -1015,7 +915,7 @@ class WritingMomentumSettingTab extends PluginSettingTab {
 			.setName('Show ribbon icon')
 			.setDesc('Display plugin icon in left ribbon')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showRibbonIcon)
+				.setValue(this.plugin.settings.showRibbonIcon || false)
 				.onChange(async (value) => {
 					this.plugin.settings.showRibbonIcon = value;
 					await this.plugin.saveSettings();
@@ -1026,7 +926,7 @@ class WritingMomentumSettingTab extends PluginSettingTab {
 			.setName('Enable notifications')
 			.setDesc('Show notifications for session events')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableNotifications)
+				.setValue(this.plugin.settings.enableNotifications || false)
 				.onChange(async (value) => {
 					this.plugin.settings.enableNotifications = value;
 					await this.plugin.saveSettings();
@@ -1313,7 +1213,7 @@ class WritingDashboard extends ItemView {
 			const session = this.plugin.currentSession;
 
 			// Calculate effective duration (excluding paused time)
-			let effectiveDuration = Date.now() - session.startTime - session.totalPausedDuration;
+			let effectiveDuration = Date.now() - session.startTime - (session.totalPausedDuration || 0);
 			if (session.paused && session.pausedTime) {
 				effectiveDuration -= (Date.now() - session.pausedTime);
 			}
@@ -1372,7 +1272,7 @@ class WritingDashboard extends ItemView {
 			const session = this.plugin.currentSession;
 			
 			// Calculate effective duration (excluding paused time)
-			let effectiveDuration = Date.now() - session.startTime - session.totalPausedDuration;
+			let effectiveDuration = Date.now() - session.startTime - (session.totalPausedDuration || 0);
 			if (session.paused && session.pausedTime) {
 				effectiveDuration -= (Date.now() - session.pausedTime);
 			}
@@ -1406,7 +1306,7 @@ class WritingDashboard extends ItemView {
 			timeEl.createEl('span', { text: 'Time', cls: 'stat-label' });
 			
 			const fileEl = statsEl.createEl('div', { cls: 'current-file' });
-			fileEl.createEl('span', { text: '📄 ' + session.filePath.split('/').pop() });
+			fileEl.createEl('span', { text: '📄 ' + (session.filePath?.split('/').pop() || 'Unknown file') });
 			
 			// Writing inspiration section
 			const inspirationEl = sessionEl.createEl('div', { cls: 'writing-inspiration' });
@@ -1564,9 +1464,11 @@ class WritingDashboard extends ItemView {
 		// Progress bar
 		const progressBarContainer = progressOverview.createEl('div', { cls: 'continuous-progress-bar' });
 		const progressBar = progressBarContainer.createEl('div', {
-			cls: 'continuous-progress-fill',
-			attr: { style: `width: ${Math.min(percentage, 100)}%` }
+			cls: 'continuous-progress-fill'
 		});
+		// Use CSS class for width instead of inline style
+		const widthPercentage = Math.min(Math.round(percentage / 5) * 5, 100); // Round to nearest 5
+		progressBar.addClass(`width-${widthPercentage}`);
 
 		// Session info
 		const sessionInfo = section.createEl('div', { cls: 'continuous-session-info' });
@@ -1646,7 +1548,9 @@ class WritingDashboard extends ItemView {
 			// Bar
 			const bar = barContainer.createEl('div', { cls: 'bar' });
 			const height = Math.max((day.words / maxWords) * 100, 2); // Minimum 2% height
-			bar.style.height = `${height}%`;
+			// Use CSS class for height instead of inline style
+			const heightPercentage = Math.min(Math.round(height / 5) * 5, 100); // Round to nearest 5
+			bar.addClass(`bar-height-${heightPercentage}`);
 			bar.addClass(day.words > 0 ? 'has-data' : 'no-data');
 			
 			// Word count tooltip
@@ -1670,13 +1574,18 @@ class WritingDashboard extends ItemView {
 		const monthlyData = this.getMonthlyData();
 		const maxWords = Math.max(...monthlyData.map(d => d.words), 100);
 		
-		// Create SVG element manually since Obsidian doesn't support createEl for SVG
-		chartEl.innerHTML = `
-			<svg class="chart-svg" width="100%" height="120" viewBox="0 0 400 120">
-				${this.generateSVGPath(monthlyData, maxWords)}
-				${this.generateSVGDots(monthlyData, maxWords)}
-			</svg>
-		`;
+		// Create SVG element using DOM API instead of innerHTML
+		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+		svg.setAttribute('class', 'chart-svg');
+		svg.setAttribute('width', '100%');
+		svg.setAttribute('height', '120');
+		svg.setAttribute('viewBox', '0 0 400 120');
+
+		// Create path for line chart
+		this.createSVGPath(svg, monthlyData, maxWords);
+		this.createSVGDots(svg, monthlyData, maxWords);
+
+		chartEl.appendChild(svg);
 	}
 
 	private renderVolumeTotals(container: Element) {
@@ -1694,30 +1603,43 @@ class WritingDashboard extends ItemView {
 		monthCard.createEl('div', { text: 'Words This Month', cls: 'volume-label' });
 	}
 
-	private generateSVGPath(monthlyData: any[], maxWords: number): string {
+	private createSVGPath(svg: SVGElement, monthlyData: {date: string; words: number}[], maxWords: number): void {
 		let pathData = '';
 		monthlyData.forEach((day, index) => {
 			const x = (index / (monthlyData.length - 1)) * 380 + 10;
 			const y = 100 - ((day.words / maxWords) * 80);
 			pathData += (index === 0 ? 'M' : 'L') + ` ${x} ${y}`;
 		});
-		
-		return `<path d="${pathData}" fill="none" stroke="var(--interactive-accent)" stroke-width="2" style="filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));" />`;
+
+		const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+		path.setAttribute('d', pathData);
+		path.setAttribute('fill', 'none');
+		path.setAttribute('stroke', 'var(--interactive-accent)');
+		path.setAttribute('stroke-width', '2');
+		path.setAttribute('style', 'filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));');
+		svg.appendChild(path);
 	}
 
-	private generateSVGDots(monthlyData: any[], maxWords: number): string {
-		let dots = '';
+	private createSVGDots(svg: SVGElement, monthlyData: {date: string; words: number}[], maxWords: number): void {
 		monthlyData.forEach((day, index) => {
 			if (day.words > 0) {
 				const x = (index / (monthlyData.length - 1)) * 380 + 10;
 				const y = 100 - ((day.words / maxWords) * 80);
-				
-				dots += `<circle cx="${x}" cy="${y}" r="3" fill="var(--interactive-accent)" style="cursor: pointer;">
-					<title>${day.date}: ${day.words} words</title>
-				</circle>`;
+
+				const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+				circle.setAttribute('cx', x.toString());
+				circle.setAttribute('cy', y.toString());
+				circle.setAttribute('r', '3');
+				circle.setAttribute('fill', 'var(--interactive-accent)');
+				circle.setAttribute('style', 'cursor: pointer;');
+
+				const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+				title.textContent = `${day.date}: ${day.words} words`;
+				circle.appendChild(title);
+
+				svg.appendChild(circle);
 			}
 		});
-		return dots;
 	}
 
 	private getWeeklyData() {

@@ -28,7 +28,7 @@ export class SessionManager {
       templateUsed: templateId,
       files: [filePath],
       completed: false,
-      targetCount: targetWordCount
+      targetCount: targetWordCount,
     };
 
     // Store initial content for word count calculation

@@ -88,7 +88,7 @@ export class ReminderScheduler {
     
     // Add click handler to notice
     const noticeEl = notice.noticeEl;
-    noticeEl.style.cursor = 'pointer';
+    noticeEl.addClass('clickable-notice');
     noticeEl.onclick = () => {
       notice.hide();
       this.handleReminderClick(reminder);
@@ -145,7 +145,7 @@ export class ReminderScheduler {
   private hasWrittenToday(): boolean {
     const today = new Date().toISOString().split('T')[0];
     const sessions = this.plugin.dataManager.getTodaysSessions();
-    return sessions.some((session: any) => session.completed && session.wordCount > 0);
+    return sessions.some((session: Record<string, any>) => session.completed && session.wordCount > 0);
   }
 
   reschedule() {

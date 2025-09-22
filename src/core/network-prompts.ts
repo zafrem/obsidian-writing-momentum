@@ -66,7 +66,7 @@ export class NetworkPromptsService {
         }
       }
     } catch (error) {
-      console.log('No cached prompts found or error loading cache:', error);
+      // No cached prompts found or error loading cache
     }
   }
 

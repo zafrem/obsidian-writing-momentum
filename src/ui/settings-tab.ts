@@ -172,7 +172,9 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 
 		const progressBar = progressEl.createEl('div', {cls: 'progress-bar-container'});
 		const progressFill = progressBar.createEl('div', {cls: 'progress-bar-fill'});
-		progressFill.style.width = `${Math.min((currentCount / targetCount) * 100, 100)}%`;
+		// Use CSS class for width instead of inline style
+		const percentage = Math.min(Math.round(((currentCount / targetCount) * 100) / 5) * 5, 100); // Round to nearest 5
+		progressFill.addClass(`width-${percentage}`);
 
 		// Template Configuration Section
 		containerEl.createEl('h3', {text: '📝 Template Configuration'});
@@ -191,7 +193,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 		];
 		variables.forEach(variable => {
 			const li = variablesList.createEl('li');
-			li.innerHTML = variable;
+			li.textContent = variable;
 		});
 
 		// Template presets

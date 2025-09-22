@@ -200,7 +200,7 @@ export class WritingDashboard extends ItemView {
     }
   }
 
-  private renderWeeklyStreak(container: Element, streak: any) {
+  private renderWeeklyStreak(container: Element, streak: {weeklyProgress?: number[]}) {
     const weeklyEl = container.createEl('div', { cls: 'weekly-streak' });
     weeklyEl.createEl('h4', { text: 'This Week' });
     

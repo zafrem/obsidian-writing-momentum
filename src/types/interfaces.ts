@@ -24,6 +24,11 @@ export interface WritingMomentumSettings {
     showRibbonIcon: boolean;
     notifications: boolean;
   };
+  // Legacy flat structure fields for backward compatibility
+  reminderTime?: string;
+  showStatusBar?: boolean;
+  showRibbonIcon?: boolean;
+  enableNotifications?: boolean;
 }
 
 export interface ReminderConfig {
@@ -55,6 +60,12 @@ export interface WritingSession {
   templateUsed?: string;
   files: string[];
   completed: boolean;
+  // Additional fields for active session management
+  active?: boolean;
+  paused?: boolean;
+  pausedTime?: number;
+  totalPausedDuration?: number;
+  filePath?: string;
 }
 
 export interface StreakData {
@@ -145,5 +156,10 @@ export const DEFAULT_SETTINGS: WritingMomentumSettings = {
     showStatusBar: true,
     showRibbonIcon: true,
     notifications: true
-  }
+  },
+  // Legacy flat structure fields for backward compatibility
+  reminderTime: '21:00',
+  showStatusBar: true,
+  showRibbonIcon: true,
+  enableNotifications: true
 };
