@@ -1,13 +1,13 @@
 import { App, Plugin, PluginManifest, TFile } from 'obsidian';
-import type { WritingMomentumSettings } from './interfaces';
+import type { WritingMomentumSettings, WritingSession, DashboardStats } from './interfaces';
 
 // Define proper interfaces for the various managers
 export interface IDataManager {
-	getDashboardStats(): any; // This would need more specific typing based on actual implementation
-	exportData(): any;
-	importData(data: Record<string, any>): Promise<void>;
-	addSession(session: any): Promise<void>;
-	getTodaysSessions(): any[];
+	getDashboardStats(): DashboardStats;
+	exportData(): Record<string, unknown>;
+	importData(data: Record<string, unknown>): Promise<void>;
+	addSession(session: WritingSession): Promise<void>;
+	getTodaysSessions(): WritingSession[];
 	getTodaysWordCount(): number;
 	loadData(): Promise<void>;
 	saveData(): Promise<void>;
@@ -19,8 +19,8 @@ export interface ITemplateEngine {
 }
 
 export interface ISessionManager {
-	getCurrentSession(): any; // This would need more specific typing
-	getSessionStats(): any;
+	getCurrentSession(): WritingSession | null;
+	getSessionStats(): DashboardStats;
 	startSession(filePath: string, template: string): void;
 	completeSession(): void;
 	endSession(): void;
@@ -52,8 +52,8 @@ export interface IWritingMomentumPlugin extends Plugin {
 	statusBarItem: HTMLElement | null;
 	manifest: PluginManifest;
 
-	loadData(): Promise<Record<string, any>>;
-	saveData(data: Record<string, any>): Promise<void>;
+	loadData(): Promise<Record<string, unknown>>;
+	saveData(data: Record<string, unknown>): Promise<void>;
 	saveSettings(): Promise<void>;
 	createQuickNote(): Promise<void>;
 }

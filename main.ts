@@ -132,19 +132,19 @@ export default class WritingMomentumPlugin extends Plugin {
 		// Add commands
 		this.addCommand({
 			id: 'open-dashboard',
-			name: 'Open Writing Dashboard',
+			name: 'Open Dashboard',
 			callback: () => this.openDashboard()
 		});
 
 		this.addCommand({
 			id: 'start-writing-session',
-			name: 'Start Writing Session',
+			name: 'Start Session',
 			callback: () => this.startQuickSession()
 		});
 
 		this.addCommand({
 			id: 'complete-session',
-			name: 'Complete Writing Session',
+			name: 'Complete Session',
 			callback: () => this.completeSession()
 		});
 
@@ -156,7 +156,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'insert-writing-prompt',
-			name: 'Insert Writing Prompt',
+			name: 'Insert Prompt',
 			callback: () => this.insertWritingPrompt()
 		});
 
@@ -872,7 +872,8 @@ class WritingMomentumSettingTab extends PluginSettingTab {
 
 			const progressBar = progressEl.createEl('div', {cls: 'progress-bar-container'});
 			const progressFill = progressBar.createEl('div', {cls: 'progress-bar-fill'});
-			progressFill.style.width = `${Math.min((currentCount / targetCount) * 100, 100)}%`;
+			const widthPercentage = Math.min(Math.round((currentCount / targetCount) * 100 / 5) * 5, 100);
+		progressFill.addClass(`width-${widthPercentage}`);
 		}
 
 		// General Settings
