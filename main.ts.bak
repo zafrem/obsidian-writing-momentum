@@ -6,7 +6,6 @@ import { ReminderScheduler } from './src/core/scheduler';
 import { TemplateEngine } from './src/core/template-engine';
 import { DataManager } from './src/core/data-manager';
 import { SessionManager } from './src/core/session-manager';
-import { TemplateManager } from './src/core/template-manager';
 
 // Purpose-based modules
 import { QaOnboardingWizard } from './src/ui/qa-onboarding-wizard';
@@ -86,7 +85,6 @@ export default class WritingMomentumPlugin extends Plugin {
 	settings: WritingMomentumSettings;
 	dataManager: DataManager;
 	templateEngine: TemplateEngine;
-	templateManager: TemplateManager;
 	sessionManager: SessionManager;
 	reminderScheduler: ReminderScheduler;
 	statusBarItem: HTMLElement | null = null;
@@ -114,7 +112,6 @@ export default class WritingMomentumPlugin extends Plugin {
 		// Initialize core systems
 		this.dataManager = new DataManager(this);
 		this.templateEngine = new TemplateEngine(this);
-		this.templateManager = new TemplateManager(this);
 		this.sessionManager = new SessionManager(this);
 		this.reminderScheduler = new ReminderScheduler(this);
 
@@ -1017,6 +1014,301 @@ Write continuously for your target time. Don't worry about grammar, structure, o
 	}
 }
 
+// Settings Tab
+class WritingMomentumSettingTab extends PluginSettingTab {
+	plugin: WritingMomentumPlugin;
+
+	constructor(app: App, plugin: WritingMomentumPlugin) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		const {containerEl} = this;
+		containerEl.empty();
+
+		containerEl.createEl('h2', {text: 'Writing Momentum Settings'});
+
+		// General Settings
+		containerEl.createEl('h3', {text: 'General Settings'});
+
+		// Reminder time
+		new Setting(containerEl)
+			.setName('Reminder time')
+			.setDesc('Daily writing reminder (HH:MM format)')
+			.addText(text => text
+				.setPlaceholder('21:00')
+				.setValue(this.plugin.settings.reminderTime || '21:00')
+				.onChange(async (value) => {
+					this.plugin.settings.reminderTime = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Show status bar
+		new Setting(containerEl)
+			.setName('Show status bar')
+			.setDesc('Display writing progress in status bar')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showStatusBar || false)
+				.onChange(async (value) => {
+					this.plugin.settings.showStatusBar = value;
+					await this.plugin.saveSettings();
+					
+					// Update status bar visibility
+					if (value && !this.plugin.statusBarItem) {
+						this.plugin.statusBarItem = this.plugin.addStatusBarItem();
+						this.plugin['updateStatusBar']();
+					} else if (!value && this.plugin.statusBarItem) {
+						this.plugin.statusBarItem.remove();
+						this.plugin.statusBarItem = null;
+					}
+				}));
+
+		// Show ribbon icon
+		new Setting(containerEl)
+			.setName('Show ribbon icon')
+			.setDesc('Display plugin icon in left ribbon')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showRibbonIcon || false)
+				.onChange(async (value) => {
+					this.plugin.settings.showRibbonIcon = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Enable notifications
+		new Setting(containerEl)
+			.setName('Enable notifications')
+			.setDesc('Show notifications for session events')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableNotifications || false)
+				.onChange(async (value) => {
+					this.plugin.settings.enableNotifications = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Random Prompts Section
+		containerEl.createEl('h3', {text: 'Random Prompts'});
+
+		const randomToggle = new Setting(containerEl)
+			.setName('Enable random prompts')
+			.setDesc('Fetch writing prompts from online sources (requires internet connection)')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.randomPrompts.enabled)
+				.onChange(async (value) => {
+					this.plugin.settings.randomPrompts.enabled = value;
+					await this.plugin.saveSettings();
+					this.display(); // Refresh to show/hide additional options
+
+					// Fetch prompts when enabled
+					if (value && this.plugin.randomPrompts) {
+						await this.plugin.randomPrompts.fetchNetworkPrompts();
+					}
+				}));
+
+		// Only show additional random prompt options if enabled
+		if (this.plugin.settings.randomPrompts.enabled) {
+			new Setting(containerEl)
+				.setName('Mix with local prompts')
+				.setDesc('Randomly mix random prompts with built-in prompts for variety')
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.randomPrompts.mixWithLocal)
+					.onChange(async (value) => {
+						this.plugin.settings.randomPrompts.mixWithLocal = value;
+						await this.plugin.saveSettings();
+					}));
+
+			new Setting(containerEl)
+				.setName('Auto-refresh prompts')
+				.setDesc('Automatically fetch new prompts daily (cached for offline use)')
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.randomPrompts.autoRefresh)
+					.onChange(async (value) => {
+						this.plugin.settings.randomPrompts.autoRefresh = value;
+						await this.plugin.saveSettings();
+					}));
+
+			// Show prompt status and manual refresh
+			const statusSetting = new Setting(containerEl)
+				.setName('Prompt cache status')
+				.setDesc('View and manage cached random prompts');
+
+			const refreshBtn = statusSetting.controlEl.createEl('button', {
+				text: 'Refresh Now',
+				cls: 'mod-cta'
+			});
+
+			refreshBtn.onclick = async () => {
+				refreshBtn.disabled = true;
+				refreshBtn.textContent = 'Refreshing...';
+
+				try {
+					const success = await this.plugin.randomPrompts.refreshPrompts();
+					if (success) {
+						new Notice('Random prompts refreshed successfully!');
+					} else {
+						new Notice('Failed to refresh prompts. Check your internet connection.');
+					}
+				} catch (error) {
+					new Notice('Error refreshing prompts: ' + error.message);
+				}
+
+				refreshBtn.disabled = false;
+				refreshBtn.textContent = 'Refresh Now';
+				this.updatePromptStatus(statusSetting);
+			};
+
+			this.updatePromptStatus(statusSetting);
+		}
+
+		// Template Presets Section
+		containerEl.createEl('h3', {text: 'Template Presets'});
+
+		const templates = [
+			{
+				name: 'Daily Journal',
+				title: '{{date}} - Daily Journal',
+				template: '# Daily Journal - {{date}}\n\n## Morning Reflection\n{{random_prompt}}\n\n## Today\'s Events\n- \n- \n- \n\n## Thoughts & Feelings\n\n\n## Gratitude\n1. \n2. \n3. \n\n---\n*Written on {{weekday}} at {{time}}*'
+			},
+			{
+				name: 'Quick Notes',
+				title: '{{time}} - Quick Note',
+				template: '# Quick Note\n\n## Idea\n{{random_prompt}}\n\n## Details\n\n\n## Next Steps\n- [ ] \n- [ ] \n\n---\n*{{weekday}} {{time}}*'
+			},
+			{
+				name: 'Project Planning',
+				title: 'Project - {{title}}',
+				template: '# Project: {{title}}\n\n## Goal\n{{random_prompt}}\n\n## Overview\n**Start Date:** {{date}}\n**Status:** Planning\n\n## Tasks\n- [ ] Task 1\n- [ ] Task 2\n- [ ] Task 3\n\n## Timeline\n\n\n## Resources\n\n\n---\n*Created {{weekday}}, {{date}} at {{time}}*'
+			}
+		];
+
+		let titleInput: HTMLInputElement;
+		let templateTextarea: HTMLTextAreaElement;
+
+		new Setting(containerEl)
+			.setName('Template preset')
+			.setDesc('Choose a template to customize')
+			.addDropdown(dropdown => {
+				dropdown.addOption('custom', 'Custom Template');
+				templates.forEach((template, index) => {
+					dropdown.addOption(index.toString(), template.name);
+				});
+
+				// Set current value based on settings
+				const currentTemplate = templates.find(t =>
+					t.title === this.plugin.settings.defaultTitlePattern &&
+					t.template === this.plugin.settings.defaultTemplate
+				);
+				dropdown.setValue(currentTemplate ? templates.indexOf(currentTemplate).toString() : 'custom');
+
+				dropdown.onChange((value) => {
+					if (value === 'custom') return;
+
+					const selectedTemplate = templates[parseInt(value)];
+					this.plugin.settings.defaultTitlePattern = selectedTemplate.title;
+					this.plugin.settings.defaultTemplate = selectedTemplate.template;
+					this.plugin.saveSettings();
+
+					// Refresh the display to update all fields
+					this.display();
+				});
+			});
+
+
+		// Page Title Pattern Editor (Full Width) - moved to bottom
+		containerEl.createEl('br');
+		containerEl.createEl('h3', {text: 'Page Title Pattern'});
+
+		const titlePatternContainer = containerEl.createDiv('title-pattern-container');
+		titlePatternContainer.createEl('p', {
+			text: 'Pattern for new page titles. Use variables like {{date}}, {{time}}, {{title}}, etc.',
+			cls: 'title-pattern-description'
+		});
+
+		titleInput = titlePatternContainer.createEl('input', {
+			cls: 'title-pattern-editor',
+			attr: {
+				type: 'text',
+				placeholder: '{{date}} - Writing Session'
+			}
+		});
+
+		titleInput.value = this.plugin.settings.defaultTitlePattern || '{{date}} - Writing Session';
+
+		titleInput.addEventListener('input', async () => {
+			this.plugin.settings.defaultTitlePattern = titleInput.value;
+			await this.plugin.saveSettings();
+		});
+
+		// Template Content Editor (Full Width) - moved to bottom
+		containerEl.createEl('h3', {text: 'Template Content Editor'});
+
+		const templateContentContainer = containerEl.createDiv('template-content-container');
+		templateContentContainer.createEl('p', {
+			text: 'Edit your template content below. Use variables like {{date}}, {{time}}, {{random_prompt}}, etc.',
+			cls: 'template-content-description'
+		});
+
+		templateTextarea = templateContentContainer.createEl('textarea', {
+			cls: 'template-content-editor',
+			attr: {
+				placeholder: '# {{title}}\n\n## Prompt\n{{random_prompt}}\n\n## Writing\n\n\n---\n*Written on {{weekday}} at {{time}}*'
+			}
+		});
+
+		templateTextarea.value = this.plugin.settings.defaultTemplate || '# {{title}}\n\n## Prompt\n{{random_prompt}}\n\n## Writing\n\n\n---\n*Written on {{weekday}} at {{time}}*';
+
+		templateTextarea.addEventListener('input', async () => {
+			this.plugin.settings.defaultTemplate = templateTextarea.value;
+			await this.plugin.saveSettings();
+		});
+
+	}
+
+	private refreshDashboard() {
+		// Find and refresh the dashboard if it's open
+		const {workspace} = this.app;
+		const dashboardLeaves = workspace.getLeavesOfType(VIEW_TYPE_WRITING_DASHBOARD);
+
+		if (dashboardLeaves.length > 0) {
+			// Get the dashboard view and refresh it
+			const dashboardLeaf = dashboardLeaves[0];
+			const dashboardView = dashboardLeaf.view as WritingDashboard;
+			if (dashboardView && dashboardView.render) {
+				dashboardView.render();
+			}
+		}
+	}
+
+	private updatePromptStatus(statusSetting: Setting) {
+		if (!this.plugin.randomPrompts) return;
+
+		const count = this.plugin.randomPrompts.getCachedPromptsCount();
+		const lastFetch = this.plugin.randomPrompts.getLastFetchTime();
+
+		let statusText = `${count} prompts cached`;
+		if (lastFetch) {
+			const timeAgo = this.getTimeAgo(lastFetch);
+			statusText += ` (last updated ${timeAgo})`;
+		} else {
+			statusText += ' (never fetched)';
+		}
+
+		statusSetting.setDesc(statusText);
+	}
+
+	private getTimeAgo(date: Date): string {
+		const now = new Date();
+		const diffMs = now.getTime() - date.getTime();
+		const diffMins = Math.floor(diffMs / (1000 * 60));
+		const diffHours = Math.floor(diffMins / 60);
+		const diffDays = Math.floor(diffHours / 24);
+
+		if (diffMins < 1) return 'just now';
+		if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+		if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+		return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+	}
+}
 
 // Dashboard View
 const VIEW_TYPE_WRITING_DASHBOARD = 'writing-momentum-dashboard';

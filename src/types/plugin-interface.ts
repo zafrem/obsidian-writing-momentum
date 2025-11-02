@@ -1,5 +1,6 @@
 import { App, Plugin, PluginManifest, TFile } from 'obsidian';
-import type { WritingMomentumSettings, WritingSession, DashboardStats } from './interfaces';
+import type { WritingMomentumSettings, WritingSession, DashboardStats, SessionLog, WritingProfile } from './interfaces';
+import type { PurposeSessionManager } from '../core/purpose-session-manager';
 
 // Define proper interfaces for the various managers
 export interface IDataManager {
@@ -20,8 +21,8 @@ export interface ITemplateEngine {
 
 export interface ISessionManager {
 	getCurrentSession(): WritingSession | null;
-	getSessionStats(): DashboardStats;
-	startSession(filePath: string, template: string): void;
+	getSessionStats(): { duration: number; wordCount: number; wpm: number; targetProgress: number | null } | null;
+	startSession(filePath: string, template?: string, targetWordCount?: number): void;
 	completeSession(): void;
 	endSession(): void;
 }
@@ -41,6 +42,23 @@ export interface IRandomPrompts {
 	getLastFetchTime(): Date | null;
 }
 
+export interface ITemplateManager {
+	getAllTemplates(): any[];
+	getTemplate(templateId: string): any | null;
+	getActiveTemplate(): any | null;
+	setActiveTemplate(templateId: string): Promise<void>;
+	createTemplate(name: string, titlePattern: string, content: string, options?: any): Promise<any>;
+	updateTemplate(templateId: string, updates: any): Promise<any>;
+	renameTemplate(templateId: string, newName: string): Promise<void>;
+	deleteTemplate(templateId: string): Promise<void>;
+	duplicateTemplate(templateId: string, newName?: string): Promise<any>;
+	validateTemplate(titlePattern: string, content: string): { valid: boolean; errors: string[] };
+	exportTemplates(): string;
+	importTemplates(jsonString: string): Promise<number>;
+	getUserTemplates(): any[];
+	getBuiltInTemplates(): any[];
+}
+
 export interface IWritingMomentumPlugin extends Plugin {
 	app: App;
 	settings: WritingMomentumSettings;
@@ -49,11 +67,19 @@ export interface IWritingMomentumPlugin extends Plugin {
 	sessionManager: ISessionManager;
 	reminderScheduler: IReminderScheduler;
 	randomPrompts: IRandomPrompts;
+	templateManager: ITemplateManager;
 	statusBarItem: HTMLElement | null;
 	manifest: PluginManifest;
+	isMobile: boolean;
+
+	// Purpose-based system
+	activeProfile: WritingProfile | null;
+	sessionLogs: SessionLog[];
+	purposeSessionManager: PurposeSessionManager | null;
 
 	loadData(): Promise<Record<string, unknown>>;
 	saveData(data: Record<string, unknown>): Promise<void>;
 	saveSettings(): Promise<void>;
+	savePurposeData(): Promise<void>;
 	createQuickNote(): Promise<void>;
 }

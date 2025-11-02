@@ -233,7 +233,7 @@ export class SessionManager {
     }
   }
 
-  getSessionStats() {
+  getSessionStats(): { duration: number; wordCount: number; wpm: number; targetProgress: number | null } | null {
     if (!this.currentSession) return null;
 
     const duration = Date.now() - this.currentSession.startTime;
@@ -244,8 +244,8 @@ export class SessionManager {
       duration: minutes,
       wordCount: this.currentSession.wordCount,
       wpm,
-      targetProgress: this.currentSession.targetCount 
-        ? (this.currentSession.wordCount / this.currentSession.targetCount) * 100 
+      targetProgress: this.currentSession.targetCount
+        ? (this.currentSession.wordCount / this.currentSession.targetCount) * 100
         : null
     };
   }

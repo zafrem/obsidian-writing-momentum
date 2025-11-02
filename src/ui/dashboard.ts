@@ -137,11 +137,11 @@ export class WritingDashboard extends ItemView {
       const stats = this.plugin.sessionManager.getSessionStats();
       if (stats) {
         const statsGrid = sessionEl.createEl('div', { cls: 'session-stats-grid' });
-        
+
         this.createStatCard(statsGrid, 'Words Written', stats.wordCount.toString(), '📝');
         this.createStatCard(statsGrid, 'Duration', `${stats.duration}m`, '⏱️');
         this.createStatCard(statsGrid, 'WPM', stats.wpm.toString(), '⚡');
-        
+
         if (stats.targetProgress !== null) {
           this.createStatCard(statsGrid, 'Progress', `${Math.round(stats.targetProgress)}%`, '📊');
         }

@@ -18,9 +18,10 @@ export class DataManager {
 
   async loadData() {
     const data = await this.plugin.loadData();
-    if (data?.writingData) {
-      this.sessions = data.writingData.sessions || [];
-      this.streak = data.writingData.streak || this.getDefaultStreak();
+    if (data && typeof data === 'object' && 'writingData' in data) {
+      const writingData = data.writingData as any;
+      this.sessions = writingData.sessions || [];
+      this.streak = writingData.streak || this.getDefaultStreak();
     }
   }
 
