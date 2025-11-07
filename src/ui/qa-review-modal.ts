@@ -1,4 +1,4 @@
-import { Modal, App, Setting } from 'obsidian';
+import { Modal, App } from 'obsidian';
 import type { WritingProfile, Recommendation } from '../types/interfaces';
 import { EstimationEngine } from '../core/estimation-engine';
 
@@ -26,15 +26,15 @@ export class QaReviewModal extends Modal {
 
     // Header
     const header = contentEl.createDiv('wm-modal-header');
-    header.createEl('h2', { text: 'Your Writing Profile' });
+    header.createEl('h2', { text: 'Your writing profile' });
     header.createEl('p', {
-      text: 'Review your Q&A answers and recommendations',
+      text: 'Review your answers and recommendations',
       cls: 'wm-modal-subtitle'
     });
 
     // Q&A Answers Section
     const answersSection = contentEl.createDiv('wm-modal-section');
-    answersSection.createEl('h3', { text: '📋 Your Answers' });
+    answersSection.createEl('h3', { text: '📋 your answers' });
 
     const answersGrid = answersSection.createDiv('wm-answers-grid');
 
@@ -43,7 +43,7 @@ export class QaReviewModal extends Modal {
 
     // Custom purpose (if applicable)
     if (this.profile.answers.customPurpose) {
-      this.addAnswerRow(answersGrid, 'Custom Purpose', this.profile.answers.customPurpose);
+      this.addAnswerRow(answersGrid, 'Custom purpose', this.profile.answers.customPurpose);
     }
 
     // Outcome
@@ -52,8 +52,8 @@ export class QaReviewModal extends Modal {
     // Unit preference
     this.addAnswerRow(
       answersGrid,
-      'Tracking Method',
-      this.profile.answers.unitPref === 'words' ? '📊 Word Count' : '⏱️ Time'
+      'Tracking method',
+      this.profile.answers.unitPref === 'words' ? '📊 Word count' : '⏱️ Time'
     );
 
     // Target hint (if provided)
@@ -61,7 +61,7 @@ export class QaReviewModal extends Modal {
       const hintLabel = this.profile.answers.unitPref === 'words'
         ? `${this.profile.answers.targetHint} words`
         : `${this.profile.answers.targetHint} minutes`;
-      this.addAnswerRow(answersGrid, 'Target Hint', hintLabel);
+      this.addAnswerRow(answersGrid, 'Target hint', hintLabel);
     }
 
     // Feasibility
@@ -75,24 +75,24 @@ export class QaReviewModal extends Modal {
     if (this.profile.answers.preferredDays && this.profile.answers.preferredDays.length > 0) {
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const dayLabels = this.profile.answers.preferredDays.map(d => days[d]).join(', ');
-      this.addAnswerRow(answersGrid, 'Preferred Days', dayLabels);
+      this.addAnswerRow(answersGrid, 'Preferred days', dayLabels);
     }
 
     // Preferred time
     if (this.profile.answers.preferredTime) {
-      this.addAnswerRow(answersGrid, 'Preferred Time', this.profile.answers.preferredTime);
+      this.addAnswerRow(answersGrid, 'Preferred time', this.profile.answers.preferredTime);
     }
 
     // Recommendation Section
     const recSection = contentEl.createDiv('wm-modal-section wm-recommendation-section');
-    recSection.createEl('h3', { text: '🎯 Recommended Defaults' });
+    recSection.createEl('h3', { text: '🎯 recommended settings' });
 
     const recGrid = recSection.createDiv('wm-recommendation-grid');
 
     // Session length
     this.addRecCard(
       recGrid,
-      'Session Length',
+      'Session length',
       `${this.profile.recommendation.sessionLengthMin} minutes`,
       '⏱️'
     );
@@ -101,7 +101,7 @@ export class QaReviewModal extends Modal {
     const targetLabel = this.profile.recommendation.target.type === 'words'
       ? `${this.profile.recommendation.target.value} words`
       : `${this.profile.recommendation.target.value} minutes`;
-    this.addRecCard(recGrid, 'Per-Session Target', targetLabel, '🎯');
+    this.addRecCard(recGrid, 'Per-session target', targetLabel, '🎯');
 
     // Weekly frequency
     const freqLabel = this.profile.recommendation.sessionsPerWeek === 7
@@ -113,7 +113,7 @@ export class QaReviewModal extends Modal {
     if (this.profile.overrides) {
       const overrideNotice = recSection.createDiv('wm-override-notice');
       overrideNotice.createEl('p', {
-        text: '⚠️ You have manual overrides active. Use "Recalculate" to apply new recommendations.',
+        text: '⚠️ manual overrides are active. Click "recalculate" to apply new recommendations.',
         cls: 'wm-override-text'
       });
     }
@@ -134,7 +134,7 @@ export class QaReviewModal extends Modal {
     if (EstimationEngine.needsRecalculation(this.profile.recommendation)) {
       const updateNotice = contentEl.createDiv('wm-update-notice');
       updateNotice.createEl('p', {
-        text: '🔄 New calculation rules available. Click "Recalculate" to update.',
+        text: '🔄 new calculation rules available. Click "recalculate" to update.',
         cls: 'wm-update-text'
       });
     }
@@ -143,7 +143,7 @@ export class QaReviewModal extends Modal {
     const actions = contentEl.createDiv('wm-modal-actions');
 
     const editBtn = actions.createEl('button', {
-      text: 'Edit Answers',
+      text: 'Edit answers',
       cls: 'wm-modal-btn wm-modal-btn-secondary'
     });
     editBtn.addEventListener('click', () => {
@@ -152,7 +152,7 @@ export class QaReviewModal extends Modal {
     });
 
     const recalcBtn = actions.createEl('button', {
-      text: 'Recalculate Defaults',
+      text: 'Recalculate',
       cls: 'wm-modal-btn wm-modal-btn-primary'
     });
     recalcBtn.addEventListener('click', () => {

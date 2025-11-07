@@ -7,6 +7,7 @@ export interface WritingMomentumSettings {
   defaultTemplate: string;
   templates: Template[];  // Added: User-created template presets
   activeTemplateId?: string;  // Added: Currently selected template
+  alwaysUseActiveTemplate: boolean;  // Added: Skip template selection dialog
   continuousWriting: {
     enabled: boolean;
     targetSessions: number;
@@ -251,6 +252,7 @@ export const DEFAULT_SETTINGS: WritingMomentumSettings = {
   defaultTemplate: '# {{title}}\n\n## Prompt\n{{random_prompt}}\n\n## Writing\n\n\n---\n*Written on {{weekday}} at {{time}}*',
   templates: [...DEFAULT_TEMPLATES],
   activeTemplateId: 'simple-writing',
+  alwaysUseActiveTemplate: false,
   continuousWriting: {
     enabled: false,
     targetSessions: 30,

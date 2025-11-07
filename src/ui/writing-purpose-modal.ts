@@ -16,7 +16,7 @@ export class WritingPurposeModal extends Modal {
 
     // Header
     const header = contentEl.createDiv('wm-modal-header');
-    header.createEl('h2', { text: 'Your Writing Purpose' });
+    header.createEl('h2', { text: 'Your writing purpose' });
     header.createEl('p', {
       text: 'Overview of your writing goals and preferences',
       cls: 'wm-modal-subtitle'
@@ -24,7 +24,7 @@ export class WritingPurposeModal extends Modal {
 
     // Purpose Section
     const purposeSection = contentEl.createDiv('wm-modal-section');
-    purposeSection.createEl('h3', { text: '📝 Why You Write' });
+    purposeSection.createEl('h3', { text: '📝 writing purpose' });
 
     const purposeCard = purposeSection.createDiv('wm-purpose-card');
     const purposeLabel = this.getPurposeLabel(this.profile.answers.purpose);
@@ -39,7 +39,7 @@ export class WritingPurposeModal extends Modal {
 
     // Outcome Section
     const outcomeSection = contentEl.createDiv('wm-modal-section');
-    outcomeSection.createEl('h3', { text: '🎯 What You Want to Achieve' });
+    outcomeSection.createEl('h3', { text: '🎯 your writing goals' });
 
     const outcomeCard = outcomeSection.createDiv('wm-outcome-card');
     outcomeCard.createEl('div', {
@@ -50,7 +50,7 @@ export class WritingPurposeModal extends Modal {
     // Final Goal Section
     if (this.profile.answers.finalGoal) {
       const finalGoalSection = contentEl.createDiv('wm-modal-section');
-      finalGoalSection.createEl('h3', { text: '🏆 Your Final Writing Goal' });
+      finalGoalSection.createEl('h3', { text: '🏆 final writing goal' });
 
       const finalGoalCard = finalGoalSection.createDiv('wm-outcome-card');
       finalGoalCard.createEl('div', {
@@ -61,11 +61,11 @@ export class WritingPurposeModal extends Modal {
 
     // Tracking Method Section
     const trackingSection = contentEl.createDiv('wm-modal-section');
-    trackingSection.createEl('h3', { text: '📊 How You Track Progress' });
+    trackingSection.createEl('h3', { text: '📊 progress tracking' });
 
     const trackingCard = trackingSection.createDiv('wm-tracking-card');
     const trackingIcon = this.profile.answers.unitPref === 'words' ? '📊' : '⏱️';
-    const trackingLabel = this.profile.answers.unitPref === 'words' ? 'Word Count' : 'Time-Based';
+    const trackingLabel = this.profile.answers.unitPref === 'words' ? 'Word count' : 'Time-based';
 
     trackingCard.createEl('div', { text: trackingIcon, cls: 'wm-tracking-icon' });
     trackingCard.createEl('div', { text: trackingLabel, cls: 'wm-tracking-label' });
@@ -95,10 +95,10 @@ export class WritingPurposeModal extends Modal {
 
   private getPurposeLabel(purpose: string): string {
     const labels: Record<string, string> = {
-      express: '📝 Self-Expression',
+      express: '📝 Self-expression',
       monetize: '💰 Monetization',
-      fun: '🎉 Fun & Creativity',
-      skill: '📚 Skill Development',
+      fun: '🎉 Fun & creativity',
+      skill: '📚 Skill development',
       custom: '✏️ Custom'
     };
     return labels[purpose] || purpose;

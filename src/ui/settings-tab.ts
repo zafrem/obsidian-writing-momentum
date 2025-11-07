@@ -4,6 +4,41 @@ import { WritingPurposeModal } from './writing-purpose-modal';
 import { QaOnboardingWizard } from './qa-onboarding-wizard';
 import type { Template } from '../types/interfaces';
 
+class ConfirmModal extends Modal {
+	private message: string;
+	private onConfirm: () => void;
+
+	constructor(app: App, message: string, onConfirm: () => void) {
+		super(app);
+		this.message = message;
+		this.onConfirm = onConfirm;
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.createEl('p', { text: this.message });
+
+		const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
+
+		const confirmBtn = buttonContainer.createEl('button', { text: 'Confirm', cls: 'mod-warning' });
+		confirmBtn.addEventListener('click', () => {
+			this.close();
+			this.onConfirm();
+		});
+
+		const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+		cancelBtn.addEventListener('click', () => {
+			this.close();
+		});
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
 export class WritingMomentumSettingTab extends PluginSettingTab {
 	plugin: IWritingMomentumPlugin;
 
@@ -16,10 +51,10 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Writing Momentum Settings'});
+		;
 
 		// Pre-QnA Section
-		containerEl.createEl('h3', {text: '📋 Writing Profile (Steps 1-3)'});
+		new Setting(containerEl).setName("📋 writing profile (steps 1-3)").setHeading();
 
 		if (this.plugin.activeProfile) {
 			// Display profile summary
@@ -58,7 +93,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				.setName('View detailed profile')
 				.setDesc('See full writing purpose modal')
 				.addButton(button => button
-					.setButtonText('View Details')
+					.setButtonText('View details')
 					.onClick(() => {
 						if (this.plugin.activeProfile) {
 							new WritingPurposeModal(this.app, this.plugin.activeProfile).open();
@@ -72,19 +107,22 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 					.setButtonText('Reset')
 					.setClass('mod-warning')
 					.onClick(async () => {
-						const confirmed = confirm('Are you sure you want to reset your writing profile? This will clear all your answers.');
-						if (confirmed) {
-							this.plugin.activeProfile = null;
-							this.plugin.sessionLogs = [];
-							await this.plugin.savePurposeData();
+						new ConfirmModal(
+							this.app,
+							'Are you sure you want to reset your writing profile? This will clear all your answers.',
+							async () => {
+								this.plugin.activeProfile = null;
+								this.plugin.sessionLogs = [];
+								await this.plugin.savePurposeData();
 
-							if (this.plugin.purposeSessionManager) {
-								this.plugin.purposeSessionManager.destroy();
-								this.plugin.purposeSessionManager = null;
+								if (this.plugin.purposeSessionManager) {
+									this.plugin.purposeSessionManager.destroy();
+									this.plugin.purposeSessionManager = null;
+								}
+
+								this.display();
 							}
-
-							this.display();
-						}
+						).open();
 					}));
 		} else {
 			// No profile - show onboarding button
@@ -92,7 +130,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				.setName('Create writing profile')
 				.setDesc('Answer questions to set up your writing goals')
 				.addButton(button => button
-					.setButtonText('Start Onboarding')
+					.setButtonText('Start onboarding')
 					.setClass('mod-cta')
 					.onClick(() => {
 						new QaOnboardingWizard(this.app, async (profile) => {
@@ -104,7 +142,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 		}
 
 		// General Settings
-		containerEl.createEl('h3', {text: '⚙️ General Settings'});
+		;
 
 		// Ensure ui object exists
 		if (!this.plugin.settings.ui) {
@@ -142,7 +180,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				}));
 
 		// Reminders Section
-		containerEl.createEl('h3', {text: '⏰ Reminders'});
+		new Setting(containerEl).setName("⏰ reminders and notifications").setHeading();
 
 		new Setting(containerEl)
 			.setName('Default reminder time')
@@ -165,11 +203,11 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				}));
 
 		// Template Configuration
-		containerEl.createEl('h3', {text: '📝 Template Management'});
+		new Setting(containerEl).setName("📝 template management").setHeading();
 
 		// Reference information
 		const referenceEl = containerEl.createDiv('template-reference');
-		referenceEl.createEl('h4', {text: 'Available Variables'});
+		new Setting(referenceEl).setName("Available variables").setHeading();
 		const variablesList = referenceEl.createEl('ul');
 		const variables = [
 			'{{date}} - Current date (format configurable)',
@@ -188,7 +226,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 		const activeTemplate = this.plugin.templateManager.getActiveTemplate();
 		new Setting(containerEl)
 			.setName('Active template')
-			.setDesc('Select which template to use for new notes')
+			.setDesc('Select which template to use as your default')
 			.addDropdown(dropdown => {
 				const templates = this.plugin.templateManager.getAllTemplates();
 				templates.forEach(template => {
@@ -202,13 +240,24 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				});
 			});
 
+		// Always use active template toggle
+		new Setting(containerEl)
+			.setName('Always use active template')
+			.setDesc('When enabled, skip the template selection dialog and always use the active template above')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.alwaysUseActiveTemplate)
+				.onChange(async (value) => {
+					this.plugin.settings.alwaysUseActiveTemplate = value;
+					await this.plugin.saveSettings();
+				}));
+
 		// Template list header
 		const templateListHeader = containerEl.createDiv('template-list-header');
-		templateListHeader.createEl('h4', {text: 'Your Templates'});
+		new Setting(templateListHeader).setName("Your templates").setHeading();
 
 		new Setting(templateListHeader)
 			.addButton(button => button
-				.setButtonText('+ New Template')
+				.setButtonText('+ new template')
 				.setClass('mod-cta')
 				.onClick(() => {
 					new TemplateEditorModal(this.app, this.plugin, null, () => {
@@ -223,7 +272,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 					}).open();
 				}))
 			.addButton(button => button
-				.setButtonText('Export All')
+				.setButtonText('Export all')
 				.onClick(() => {
 					const json = this.plugin.templateManager.exportTemplates();
 					const blob = new Blob([json], { type: 'application/json' });
@@ -240,7 +289,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 		this.renderTemplateList(templateListContainer);
 
 		// File Paths
-		containerEl.createEl('h3', {text: '📁 File Paths'});
+		new Setting(containerEl).setName("📁 file paths").setHeading();
 
 		// Ensure paths object exists
 		if (!this.plugin.settings.paths) {
@@ -259,7 +308,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				}));
 
 		// Data Management
-		containerEl.createEl('h3', {text: '💾 Data Management'});
+		new Setting(containerEl).setName("💾 data management").setHeading();
 
 		new Setting(containerEl)
 			.setName('Export data')
@@ -299,7 +348,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 
 		// Built-in templates section
 		if (builtInTemplates.length > 0) {
-			container.createEl('h5', { text: 'Built-in Templates', cls: 'template-section-header' });
+			new Setting(container).setName("Built-in").setHeading();
 			builtInTemplates.forEach(template => {
 				this.renderTemplateItem(container, template, true);
 			});
@@ -307,7 +356,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 
 		// Custom templates section
 		if (customTemplates.length > 0) {
-			container.createEl('h5', { text: 'Custom Templates', cls: 'template-section-header' });
+			new Setting(container).setName("Custom").setHeading();
 			customTemplates.forEach(template => {
 				this.renderTemplateItem(container, template, false);
 			});
@@ -315,7 +364,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 
 		if (customTemplates.length === 0) {
 			const emptyState = container.createDiv('template-empty-state');
-			emptyState.createEl('p', { text: 'No custom templates yet. Click "New Template" to create one.' });
+			emptyState.createEl('p', { text: 'No custom templates yet. Click "new template" to create one.' });
 		}
 	}
 
@@ -362,15 +411,18 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				.setTooltip('Delete template')
 				.setClass('mod-warning')
 				.onClick(async () => {
-					const confirmed = confirm(`Delete template "${template.name}"?`);
-					if (confirmed) {
-						try {
-							await this.plugin.templateManager.deleteTemplate(template.id);
-							this.display();
-						} catch (error) {
-							new Notice(`Error: ${error.message}`);
+					new ConfirmModal(
+						this.app,
+						`Delete template "${template.name}"?`,
+						async () => {
+							try {
+								await this.plugin.templateManager.deleteTemplate(template.id);
+								this.display();
+							} catch (error) {
+								new Notice(`Error: ${error.message}`);
+							}
 						}
-					}
+					).open();
 				}));
 		} else {
 			// Duplicate button for built-in templates
@@ -413,7 +465,7 @@ class TemplateEditorModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl('h2', { text: this.template ? 'Edit Template' : 'Create New Template' });
+		contentEl.createEl('h2', { text: this.template ? 'Edit template' : 'Create new template' });
 
 		// Template name
 		new Setting(contentEl)
@@ -422,7 +474,7 @@ class TemplateEditorModal extends Modal {
 			.addText(text => {
 				this.nameInput = text.inputEl;
 				text.setValue(this.template?.name || '')
-					.setPlaceholder('My Custom Template');
+					.setPlaceholder('My custom template');
 			});
 
 		// Category
@@ -433,9 +485,9 @@ class TemplateEditorModal extends Modal {
 				this.categoryDropdown = dropdown.selectEl;
 				dropdown
 					.addOption('custom', 'Custom')
-					.addOption('daily', 'Daily Journal')
-					.addOption('blog', 'Blog Post')
-					.addOption('fiction', 'Fiction Writing')
+					.addOption('daily', 'Daily journal')
+					.addOption('blog', 'Blog post')
+					.addOption('fiction', 'Fiction writing')
 					.setValue(this.template?.category || 'custom');
 			});
 
@@ -463,7 +515,7 @@ class TemplateEditorModal extends Modal {
 
 		// Content
 		const contentSetting = contentEl.createDiv('template-content-setting');
-		contentSetting.createEl('label', { text: 'Template Content', cls: 'setting-item-name' });
+		contentSetting.createEl('label', { text: 'Template content', cls: 'setting-item-name' });
 		contentSetting.createEl('div', {
 			text: 'Use variables like {{date}}, {{time}}, {{random_prompt}}, etc.',
 			cls: 'setting-item-description'
@@ -480,7 +532,7 @@ class TemplateEditorModal extends Modal {
 		const buttonContainer = contentEl.createDiv('template-modal-buttons');
 
 		const saveButton = buttonContainer.createEl('button', {
-			text: this.template ? 'Save Changes' : 'Create Template',
+			text: this.template ? 'Save changes' : 'Create template',
 			cls: 'mod-cta'
 		});
 		saveButton.addEventListener('click', () => this.handleSave());
@@ -563,7 +615,7 @@ class TemplatePreviewModal extends Modal {
 			contentEl.createEl('p', { text: this.template.description, cls: 'template-preview-description' });
 		}
 
-		contentEl.createEl('h3', { text: 'Title Pattern' });
+		contentEl.createEl('h3', { text: 'Title pattern' });
 		contentEl.createEl('code', { text: this.template.titlePattern, cls: 'template-preview-code' });
 
 		contentEl.createEl('h3', { text: 'Content' });
@@ -571,7 +623,7 @@ class TemplatePreviewModal extends Modal {
 		contentPre.createEl('code', { text: this.template.content });
 
 		if (this.template.variables && this.template.variables.length > 0) {
-			contentEl.createEl('h3', { text: 'Variables Used' });
+			contentEl.createEl('h3', { text: 'Variables used' });
 			const variablesList = contentEl.createEl('ul');
 			this.template.variables.forEach(variable => {
 				variablesList.createEl('li', { text: `{{${variable}}}` });
@@ -603,7 +655,7 @@ class TemplateImportModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl('h2', { text: 'Import Templates' });
+		contentEl.createEl('h2', { text: 'Import templates' });
 		contentEl.createEl('p', { text: 'Paste the exported template JSON below:' });
 
 		const textarea = contentEl.createEl('textarea', {

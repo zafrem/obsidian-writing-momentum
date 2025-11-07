@@ -1,6 +1,11 @@
 import type { WritingSession, StreakData, DashboardStats } from '../types/interfaces';
 import type { IWritingMomentumPlugin } from '../types/plugin-interface';
 
+interface WritingData {
+  sessions?: WritingSession[];
+  streak?: StreakData;
+}
+
 export class DataManager {
   private plugin: IWritingMomentumPlugin;
   private sessions: WritingSession[] = [];
@@ -19,7 +24,7 @@ export class DataManager {
   async loadData() {
     const data = await this.plugin.loadData();
     if (data && typeof data === 'object' && 'writingData' in data) {
-      const writingData = data.writingData as any;
+      const writingData = data.writingData as WritingData;
       this.sessions = writingData.sessions || [];
       this.streak = writingData.streak || this.getDefaultStreak();
     }
@@ -64,6 +69,10 @@ export class DataManager {
       
       await this.saveData();
     }
+  }
+
+  getAllSessions(): WritingSession[] {
+    return this.sessions;
   }
 
   getTodaysSessions(): WritingSession[] {
@@ -272,7 +281,7 @@ export class DataManager {
     };
   }
 
-  async importData(data: Record<string, any>) {
+  async importData(data: WritingData) {
     if (data.sessions) {
       this.sessions = [...this.sessions, ...data.sessions];
     }

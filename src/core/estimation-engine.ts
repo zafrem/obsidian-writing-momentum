@@ -61,7 +61,7 @@ export class EstimationEngine {
    */
   static estimate(answers: QaAnswers): Recommendation {
     const base = PRESETS[answers.purpose] || PRESETS.custom;
-    let rec = { ...base };
+    const rec = { ...base };
 
     // 1. Adjust for outcome ambition
     const ambition = this.getAmbitionLevel(answers.outcome || '');
@@ -73,11 +73,16 @@ export class EstimationEngine {
     // Minutes: +20% per ambition level
     rec.sessionLengthMin = Math.round(rec.sessionLengthMin * (1 + 0.2 * ambition));
 
-    // 2. Adjust for feasibility
+    // 2. Adjust for feasibility (adjust session length and word targets based on available time)
     if (answers.feasibility === 'busy') {
-      rec.sessionsPerWeek = Math.max(2, rec.sessionsPerWeek - 1);
+      rec.sessionLengthMin = 15;  // ~15 minutes per session
+      rec.targetWords = 400;       // ~400 words per session
     } else if (answers.feasibility === 'free') {
-      rec.sessionsPerWeek += 1;
+      rec.sessionLengthMin = 60;  // ~1 hour per session
+      rec.targetWords = 1600;      // ~1600 words per session
+    } else {
+      rec.sessionLengthMin = 30;  // ~30 minutes per session (normal)
+      rec.targetWords = 800;       // ~800 words per session
     }
 
     // 3. Apply user hint if provided

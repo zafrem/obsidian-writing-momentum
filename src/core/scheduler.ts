@@ -143,9 +143,8 @@ export class ReminderScheduler {
   }
 
   private hasWrittenToday(): boolean {
-    const today = new Date().toISOString().split('T')[0];
     const sessions = this.plugin.dataManager.getTodaysSessions();
-    return sessions.some((session: Record<string, any>) => session.completed && session.wordCount > 0);
+    return sessions.some(session => session.completed && session.wordCount > 0);
   }
 
   reschedule() {

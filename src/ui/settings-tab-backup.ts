@@ -1,7 +1,42 @@
-import { App, PluginSettingTab, Setting, TFile, TFolder } from 'obsidian';
+import { App, PluginSettingTab, Setting, Modal } from 'obsidian';
 import type { IWritingMomentumPlugin } from '../types/plugin-interface';
 import { WritingPurposeModal } from './writing-purpose-modal';
 import { QaOnboardingWizard } from './qa-onboarding-wizard';
+
+class ConfirmModal extends Modal {
+	private message: string;
+	private onConfirm: () => void;
+
+	constructor(app: App, message: string, onConfirm: () => void) {
+		super(app);
+		this.message = message;
+		this.onConfirm = onConfirm;
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.createEl('p', { text: this.message });
+
+		const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
+
+		const confirmBtn = buttonContainer.createEl('button', { text: 'Confirm', cls: 'mod-warning' });
+		confirmBtn.addEventListener('click', () => {
+			this.close();
+			this.onConfirm();
+		});
+
+		const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+		cancelBtn.addEventListener('click', () => {
+			this.close();
+		});
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
 
 export class WritingMomentumSettingTab extends PluginSettingTab {
 	plugin: IWritingMomentumPlugin;
@@ -16,10 +51,10 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 			const {containerEl} = this;
 			containerEl.empty();
 
-			containerEl.createEl('h2', {text: 'Writing Momentum Settings'});
+			;
 
 		// Reminders Section
-		containerEl.createEl('h3', {text: '⏰ Reminders'});
+		new Setting(containerEl).setName("⏰ reminders and notifications").setHeading();
 		
 		new Setting(containerEl)
 			.setName('Default reminder time')
@@ -43,7 +78,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				}));
 
 		// Streak Section
-		containerEl.createEl('h3', {text: '🔥 Streak Settings'});
+		new Setting(containerEl).setName("🔥 streak tracking").setHeading();
 		
 		new Setting(containerEl)
 			.setName('Streak mode')
@@ -82,7 +117,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				}));
 
 		// UI Section
-		containerEl.createEl('h3', {text: '🎨 Interface'});
+		new Setting(containerEl).setName("🎨 interface").setHeading();
 
 		new Setting(containerEl)
 			.setName('Show status bar')
@@ -115,7 +150,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				}));
 
 		// Continuous Writing Section
-		containerEl.createEl('h3', {text: '🔥 Continuous Writing'});
+		new Setting(containerEl).setName("🔥 continuous writing").setHeading();
 
 		new Setting(containerEl)
 			.setName('Enable continuous writing mode')
@@ -155,7 +190,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 			.setName('Reset continuous writing counter')
 			.setDesc('Reset your current progress and start over')
 			.addButton(button => button
-				.setButtonText('Reset Counter')
+				.setButtonText('Reset counter')
 				.setClass('mod-warning')
 				.onClick(async () => {
 					this.plugin.settings.continuousWriting.currentCount = 0;
@@ -165,10 +200,10 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 
 		// Show current progress
 		const progressEl = containerEl.createDiv('continuous-writing-progress');
-		progressEl.createEl('h4', {text: 'Current Progress'});
+		new Setting(progressEl).setName("Current progress").setHeading();
 		const currentCount = this.plugin.settings.continuousWriting.currentCount;
 		const targetCount = this.plugin.settings.continuousWriting.targetSessions;
-		const progressText = progressEl.createEl('p', {
+		progressEl.createEl('p', {
 			text: `${currentCount} / ${targetCount} sessions completed (${Math.round((currentCount / targetCount) * 100)}%)`,
 			cls: 'progress-text'
 		});
@@ -180,7 +215,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 		progressFill.addClass(`width-${percentage}`);
 
 		// Pre-QnA Section
-		containerEl.createEl('h3', {text: '📋 Writing Profile (Steps 1-3)'});
+		new Setting(containerEl).setName("📋 writing profile (steps 1-3)").setHeading();
 
 		if (this.plugin.activeProfile) {
 			// Display profile summary
@@ -219,7 +254,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				.setName('View detailed profile')
 				.setDesc('See full writing purpose modal')
 				.addButton(button => button
-					.setButtonText('View Details')
+					.setButtonText('View details')
 					.onClick(() => {
 						if (this.plugin.activeProfile) {
 							new WritingPurposeModal(this.app, this.plugin.activeProfile).open();
@@ -233,19 +268,22 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 					.setButtonText('Reset')
 					.setClass('mod-warning')
 					.onClick(async () => {
-						const confirmed = confirm('Are you sure you want to reset your writing profile? This will clear all your answers.');
-						if (confirmed) {
-							this.plugin.activeProfile = null;
-							this.plugin.sessionLogs = [];
-							await this.plugin.savePurposeData();
+						new ConfirmModal(
+							this.app,
+							'Are you sure you want to reset your writing profile? This will clear all your answers.',
+							async () => {
+								this.plugin.activeProfile = null;
+								this.plugin.sessionLogs = [];
+								await this.plugin.savePurposeData();
 
-							if (this.plugin.purposeSessionManager) {
-								this.plugin.purposeSessionManager.destroy();
-								this.plugin.purposeSessionManager = null;
+								if (this.plugin.purposeSessionManager) {
+									this.plugin.purposeSessionManager.destroy();
+									this.plugin.purposeSessionManager = null;
+								}
+
+								this.display();
 							}
-
-							this.display();
-						}
+						).open();
 					}));
 		} else {
 			// No profile - show onboarding button
@@ -253,7 +291,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				.setName('Create writing profile')
 				.setDesc('Answer questions to set up your writing goals')
 				.addButton(button => button
-					.setButtonText('Start Onboarding')
+					.setButtonText('Start onboarding')
 					.setClass('mod-cta')
 					.onClick(() => {
 						new QaOnboardingWizard(this.app, async (profile) => {
@@ -265,11 +303,11 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 		}
 
 		// Template Configuration Section
-		containerEl.createEl('h3', {text: '📝 Template Configuration'});
+		new Setting(containerEl).setName("📝 template configuration").setHeading();
 
 		// Reference information
 		const referenceEl = containerEl.createDiv('template-reference');
-		referenceEl.createEl('h4', {text: 'Available Variables'});
+		new Setting(referenceEl).setName("Available variables").setHeading();
 		const variablesList = referenceEl.createEl('ul');
 		const variables = [
 			'{{date}} - Current date (format configurable)',
@@ -304,14 +342,11 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 		];
 
 		// Template selector
-		let titleInput: HTMLInputElement;
-		let templateTextarea: HTMLTextAreaElement;
-
 		new Setting(containerEl)
 			.setName('Template preset')
 			.setDesc('Choose a template to customize')
 			.addDropdown(dropdown => {
-				dropdown.addOption('custom', 'Custom Template');
+				dropdown.addOption('custom', 'Custom template');
 				templates.forEach((template, index) => {
 					dropdown.addOption(index.toString(), template.name);
 				});
@@ -338,7 +373,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 
 
 		// Paths Section
-		containerEl.createEl('h3', {text: '📁 File Paths'});
+		new Setting(containerEl).setName("📁 file paths").setHeading();
 
 		new Setting(containerEl)
 			.setName('Prompts file')
@@ -352,7 +387,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				}));
 
 		// Data Management
-		containerEl.createEl('h3', {text: '💾 Data Management'});
+		new Setting(containerEl).setName("💾 data management").setHeading();
 		
 		new Setting(containerEl)
 			.setName('Export data')
@@ -370,7 +405,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				}));
 
 		// Page Title Pattern Editor (Full Width)
-		containerEl.createEl('h3', {text: 'Page Title Pattern'});
+		new Setting(containerEl).setName("Page title pattern").setHeading();
 
 		const titlePatternContainer = containerEl.createDiv('title-pattern-container');
 		titlePatternContainer.createEl('p', {
@@ -378,7 +413,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 			cls: 'title-pattern-description'
 		});
 
-		titleInput = titlePatternContainer.createEl('input', {
+		const titleInput = titlePatternContainer.createEl('input', {
 			cls: 'title-pattern-editor',
 			attr: {
 				type: 'text',
@@ -394,7 +429,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 		});
 
 		// Template Content Editor (Full Width)
-		containerEl.createEl('h3', {text: 'Template Content Editor'});
+		new Setting(containerEl).setName("Template content editor").setHeading();
 
 		const templateContentContainer = containerEl.createDiv('template-content-container');
 		templateContentContainer.createEl('p', {
@@ -402,7 +437,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 			cls: 'template-content-description'
 		});
 
-		templateTextarea = templateContentContainer.createEl('textarea', {
+		const templateTextarea = templateContentContainer.createEl('textarea', {
 			cls: 'template-content-editor',
 			attr: {
 				placeholder: '# {{title}}\n\n## Prompt\n{{random_prompt}}\n\n## Writing\n\n\n---\n*Written on {{weekday}} at {{time}}*'
@@ -419,7 +454,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 			console.error('Error in WritingMomentumSettingTab.display():', error);
 			const {containerEl} = this;
 			containerEl.empty();
-			containerEl.createEl('h2', {text: 'Writing Momentum Settings'});
+			;
 			containerEl.createEl('p', {
 				text: 'An error occurred while loading settings. Please check the console for details.',
 				cls: 'mod-warning'

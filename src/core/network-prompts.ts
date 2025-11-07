@@ -65,7 +65,7 @@ export class NetworkPromptsService {
           this.lastFetchTime = cacheData.timestamp || 0;
         }
       }
-    } catch (error) {
+    } catch {
       // No cached prompts found or error loading cache
     }
   }

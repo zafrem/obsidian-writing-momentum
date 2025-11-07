@@ -1,5 +1,5 @@
 import { Modal, App, Setting } from 'obsidian';
-import type { Purpose, QaAnswers, UnitType, Feasibility, WritingProfile, Recommendation } from '../types/interfaces';
+import type { Purpose, QaAnswers, UnitType, Feasibility, WritingProfile } from '../types/interfaces';
 import { EstimationEngine } from '../core/estimation-engine';
 
 export class QaOnboardingWizard extends Modal {
@@ -30,7 +30,7 @@ export class QaOnboardingWizard extends Modal {
 
     // Header
     const header = contentEl.createDiv('wm-wizard-header');
-    header.createEl('h2', { text: 'Writing Goals Setup' });
+    header.createEl('h2', { text: 'Writing goals setup' });
     header.createEl('p', {
       text: `Help us understand your writing needs (Step ${this.step} of ${this.totalSteps})`
     });
@@ -126,7 +126,7 @@ export class QaOnboardingWizard extends Modal {
       new Setting(customContainer)
         .setName('Describe your purpose')
         .addText(text => text
-          .setPlaceholder('e.g., Academic research, Technical documentation...')
+          .setPlaceholder('E.g., academic research, technical documentation...')
           .setValue(this.answers.customPurpose || '')
           .onChange(value => {
             this.answers.customPurpose = value;
@@ -202,7 +202,7 @@ export class QaOnboardingWizard extends Modal {
     const inputContainer = container.createDiv('wm-wizard-input-large');
     const textarea = inputContainer.createEl('textarea', {
       cls: 'wm-wizard-textarea',
-      attr: { placeholder: 'Describe your total goal (e.g., "Write a 50,000 word novel")...' }
+      attr: { placeholder: 'Describe your total goal (e.g., "write a 50,000 word novel")...' }
     });
     textarea.value = this.answers.finalGoal || '';
     textarea.addEventListener('input', () => {
@@ -265,9 +265,21 @@ export class QaOnboardingWizard extends Modal {
     feasibilityContainer.createEl('h4', { text: 'How is your schedule?' });
 
     const feasibilities: { value: Feasibility; label: string; description: string }[] = [
-      { value: 'busy', label: 'Busy', description: 'Limited free time' },
-      { value: 'normal', label: 'Normal', description: 'Moderate availability' },
-      { value: 'free', label: 'Flexible', description: 'Good availability' }
+      {
+        value: 'busy',
+        label: 'Busy',
+        description: this.answers.unitPref === 'words' ? '~400 words' : '~15 min per session'
+      },
+      {
+        value: 'normal',
+        label: 'Normal',
+        description: this.answers.unitPref === 'words' ? '~800 words' : '~30 min per session'
+      },
+      {
+        value: 'free',
+        label: 'Flexible',
+        description: this.answers.unitPref === 'words' ? '~1600 words' : '~1 hour per session'
+      }
     ];
 
     const feasibilityGrid = feasibilityContainer.createDiv('wm-wizard-feasibility-grid');
@@ -356,7 +368,7 @@ export class QaOnboardingWizard extends Modal {
     }
 
     const nextBtn = nav.createEl('button', {
-      text: this.step === this.totalSteps ? 'Calculate & Finish' : 'Next',
+      text: this.step === this.totalSteps ? 'Calculate & finish' : 'Next',
       cls: 'wm-wizard-btn wm-wizard-btn-next'
     });
 

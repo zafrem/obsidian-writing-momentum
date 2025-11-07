@@ -1,5 +1,5 @@
-import { TFile, TFolder } from 'obsidian';
-import type { Template, TemplateVariable, PromptSource } from '../types/interfaces';
+import { TFile } from 'obsidian';
+import type { TemplateVariable } from '../types/interfaces';
 import type { IWritingMomentumPlugin } from '../types/plugin-interface';
 
 export class TemplateEngine {

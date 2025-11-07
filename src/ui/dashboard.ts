@@ -1,5 +1,4 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
-import type { DashboardStats } from '../types/interfaces';
 import type { IWritingMomentumPlugin } from '../types/plugin-interface';
 
 export const VIEW_TYPE_WRITING_DASHBOARD = 'writing-momentum-dashboard';
@@ -17,7 +16,7 @@ export class WritingDashboard extends ItemView {
   }
 
   getDisplayText(): string {
-    return 'Writing Dashboard';
+    return 'Writing dashboard';
   }
 
   getIcon(): string {
@@ -51,7 +50,7 @@ export class WritingDashboard extends ItemView {
 
   private renderHeader(container: Element) {
     const header = container.createEl('div', { cls: 'dashboard-header' });
-    header.createEl('h2', { text: 'Writing Dashboard', cls: 'dashboard-title' });
+    header.createEl('h2', { text: 'Writing dashboard', cls: 'dashboard-title' });
 
     const refreshBtn = header.createEl('button', {
       text: 'Refresh',
@@ -68,19 +67,19 @@ export class WritingDashboard extends ItemView {
     }
 
     const modeSection = container.createEl('div', { cls: 'dashboard-section writing-mode' });
-    modeSection.createEl('h3', { text: '✍️ Writing Mode' });
+    modeSection.createEl('h3', { text: '✍️ writing mode' });
 
     const modeGrid = modeSection.createEl('div', { cls: 'writing-mode-grid' });
 
     // Quick Start option
     const quickStartCard = modeGrid.createEl('div', { cls: 'mode-card quick-start-card' });
     quickStartCard.createEl('div', { text: '⚡', cls: 'mode-icon' });
-    quickStartCard.createEl('div', { text: 'Quick Start', cls: 'mode-title' });
+    quickStartCard.createEl('div', { text: 'Quick start', cls: 'mode-title' });
     quickStartCard.createEl('div', { text: 'Start writing immediately', cls: 'mode-description' });
 
     const quickStartBtn = quickStartCard.createEl('button', { cls: 'mode-start-btn' });
     quickStartBtn.createEl('span', { text: 'Ready', cls: 'btn-left-text' });
-    quickStartBtn.createEl('span', { text: 'Start Session', cls: 'btn-center-text' });
+    quickStartBtn.createEl('span', { text: 'Start session', cls: 'btn-center-text' });
     quickStartBtn.createEl('span', { text: 'Write', cls: 'btn-right-text' });
 
     quickStartBtn.onclick = async () => {
@@ -95,7 +94,7 @@ export class WritingDashboard extends ItemView {
 
     const templateBtn = templateCard.createEl('button', { cls: 'mode-start-btn' });
     templateBtn.createEl('span', { text: 'Focus', cls: 'btn-left-text' });
-    templateBtn.createEl('span', { text: 'Start Session', cls: 'btn-center-text' });
+    templateBtn.createEl('span', { text: 'Start session', cls: 'btn-center-text' });
     templateBtn.createEl('span', { text: 'Create', cls: 'btn-right-text' });
 
     templateBtn.onclick = async () => {
@@ -109,7 +108,7 @@ export class WritingDashboard extends ItemView {
 
     if (currentSession) {
       const completeBtn = buttonContainer.createEl('button', {
-        text: 'Complete Session',
+        text: 'Complete session',
         cls: 'top-complete-btn'
       });
       completeBtn.onclick = () => {
@@ -118,7 +117,7 @@ export class WritingDashboard extends ItemView {
       };
     } else {
       const startBtn = buttonContainer.createEl('button', {
-        text: 'Start Session',
+        text: 'Start session',
         cls: 'top-start-btn'
       });
       startBtn.onclick = async () => {
@@ -132,13 +131,13 @@ export class WritingDashboard extends ItemView {
     const sessionEl = container.createEl('div', { cls: 'dashboard-section current-session' });
     
     if (currentSession) {
-      sessionEl.createEl('h3', { text: '🎯 Active Session' });
+      sessionEl.createEl('h3', { text: '🎯 active session' });
       
       const stats = this.plugin.sessionManager.getSessionStats();
       if (stats) {
         const statsGrid = sessionEl.createEl('div', { cls: 'session-stats-grid' });
 
-        this.createStatCard(statsGrid, 'Words Written', stats.wordCount.toString(), '📝');
+        this.createStatCard(statsGrid, 'Words written', stats.wordCount.toString(), '📝');
         this.createStatCard(statsGrid, 'Duration', `${stats.duration}m`, '⏱️');
         this.createStatCard(statsGrid, 'WPM', stats.wpm.toString(), '⚡');
 
@@ -150,7 +149,7 @@ export class WritingDashboard extends ItemView {
       const actions = sessionEl.createEl('div', { cls: 'session-actions' });
 
       const endBtn = actions.createEl('button', {
-        text: 'End Session',
+        text: 'End session',
         cls: 'session-btn end-btn'
       });
       endBtn.onclick = () => {
@@ -158,7 +157,7 @@ export class WritingDashboard extends ItemView {
         this.render();
       };
     } else {
-      sessionEl.createEl('h3', { text: 'No Active Session' });
+      sessionEl.createEl('h3', { text: 'No active session' });
       sessionEl.createEl('p', { 
         text: 'Start writing from a reminder or use a template to begin tracking.',
         cls: 'no-session-message'
@@ -170,30 +169,30 @@ export class WritingDashboard extends ItemView {
     const stats = this.plugin.dataManager.getDashboardStats();
     const todayEl = container.createEl('div', { cls: 'dashboard-section today-stats' });
     
-    todayEl.createEl('h3', { text: 'Today\'s Progress' });
+    todayEl.createEl('h3', { text: 'Today\'s progress' });
     
     const statsGrid = todayEl.createEl('div', { cls: 'stats-grid' });
-    this.createStatCard(statsGrid, 'Words Today', stats.todayWordCount.toString(), '📝');
-    this.createStatCard(statsGrid, 'This Week', stats.weekWordCount.toString(), '📊');
-    this.createStatCard(statsGrid, 'This Month', stats.monthWordCount.toString(), '📈');
-    this.createStatCard(statsGrid, 'Sessions This Week', stats.sessionsThisWeek.toString(), '✍️');
+    this.createStatCard(statsGrid, 'Words today', stats.todayWordCount.toString(), '📝');
+    this.createStatCard(statsGrid, 'This week', stats.weekWordCount.toString(), '📊');
+    this.createStatCard(statsGrid, 'This month', stats.monthWordCount.toString(), '📈');
+    this.createStatCard(statsGrid, 'Sessions this week', stats.sessionsThisWeek.toString(), '✍️');
   }
 
   private renderStreak(container: Element) {
     const stats = this.plugin.dataManager.getDashboardStats();
     const streakEl = container.createEl('div', { cls: 'dashboard-section streak-section' });
     
-    streakEl.createEl('h3', { text: '🔥 Writing Streak' });
+    streakEl.createEl('h3', { text: '🔥 writing streak' });
     
     const streakGrid = streakEl.createEl('div', { cls: 'streak-grid' });
     
     const currentStreak = streakGrid.createEl('div', { cls: 'streak-card current-streak' });
     currentStreak.createEl('div', { text: stats.streak.current.toString(), cls: 'streak-number' });
-    currentStreak.createEl('div', { text: 'Current Streak', cls: 'streak-label' });
-    
+    currentStreak.createEl('div', { text: 'Current streak', cls: 'streak-label' });
+
     const longestStreak = streakGrid.createEl('div', { cls: 'streak-card longest-streak' });
     longestStreak.createEl('div', { text: stats.streak.longest.toString(), cls: 'streak-number' });
-    longestStreak.createEl('div', { text: 'Longest Streak', cls: 'streak-label' });
+    longestStreak.createEl('div', { text: 'Longest streak', cls: 'streak-label' });
 
     if (this.plugin.settings.streakRule.mode === 'weekly') {
       this.renderWeeklyStreak(streakEl, stats.streak);
@@ -202,7 +201,7 @@ export class WritingDashboard extends ItemView {
 
   private renderWeeklyStreak(container: Element, streak: {weeklyProgress?: number[]}) {
     const weeklyEl = container.createEl('div', { cls: 'weekly-streak' });
-    weeklyEl.createEl('h4', { text: 'This Week' });
+    weeklyEl.createEl('h4', { text: 'This week' });
     
     const daysEl = weeklyEl.createEl('div', { cls: 'week-days' });
     const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -227,7 +226,7 @@ export class WritingDashboard extends ItemView {
 
   private renderWeeklyProgress(container: Element) {
     const progressEl = container.createEl('div', { cls: 'dashboard-section weekly-progress' });
-    progressEl.createEl('h3', { text: 'Weekly Overview' });
+    progressEl.createEl('h3', { text: 'Weekly overview' });
     
     // This could be expanded to show a more detailed weekly breakdown
     const stats = this.plugin.dataManager.getDashboardStats();
@@ -237,20 +236,20 @@ export class WritingDashboard extends ItemView {
       text: `${Math.round(stats.completionRate)}%`,
       cls: 'completion-percentage'
     });
-    completionEl.createEl('div', { 
-      text: 'Target Achievement Rate',
+    completionEl.createEl('div', {
+      text: 'Target achievement rate',
       cls: 'completion-label'
     });
   }
 
   private renderQuickActions(container: Element) {
     const actionsEl = container.createEl('div', { cls: 'dashboard-section quick-actions' });
-    actionsEl.createEl('h3', { text: '⚡ Actions' });
+    actionsEl.createEl('h3', { text: '⚡ actions' });
 
     const buttonsEl = actionsEl.createEl('div', { cls: 'action-buttons' });
 
     const settingsBtn = buttonsEl.createEl('button', {
-      text: '⚙️ Settings',
+      text: '⚙️ settings',
       cls: 'action-btn'
     });
     settingsBtn.onclick = () => {
@@ -268,7 +267,7 @@ export class WritingDashboard extends ItemView {
     const stats = this.plugin.dataManager.getDashboardStats();
     const recentEl = container.createEl('div', { cls: 'dashboard-section recent-sessions' });
     
-    recentEl.createEl('h3', { text: 'Recent Sessions' });
+    recentEl.createEl('h3', { text: 'Recent sessions' });
     
     if (stats.recentSessions.length === 0) {
       recentEl.createEl('p', { 
@@ -312,7 +311,7 @@ export class WritingDashboard extends ItemView {
     }
 
     const section = container.createEl('div', { cls: 'dashboard-section continuous-writing' });
-    section.createEl('h3', { text: '🔥 Continuous Writing Mode' });
+    section.createEl('h3', { text: '🔥 continuous writing mode' });
 
     const currentCount = this.plugin.settings.continuousWriting.currentCount;
     const targetCount = this.plugin.settings.continuousWriting.targetSessions;
@@ -327,7 +326,7 @@ export class WritingDashboard extends ItemView {
       cls: 'continuous-count'
     });
     progressText.createEl('span', {
-      text: ` sessions completed`,
+      text: ` Sessions completed`,
       cls: 'continuous-label'
     });
 
@@ -339,7 +338,7 @@ export class WritingDashboard extends ItemView {
 
     // Progress bar
     const progressBarContainer = progressOverview.createEl('div', { cls: 'continuous-progress-bar' });
-    const progressBar = progressBarContainer.createEl('div', {
+    progressBarContainer.createEl('div', {
       cls: 'continuous-progress-fill',
       attr: { style: `width: ${Math.min(percentage, 100)}%` }
     });
@@ -355,7 +354,7 @@ export class WritingDashboard extends ItemView {
     const actions = section.createEl('div', { cls: 'continuous-actions' });
 
     const startBtn = actions.createEl('button', {
-      text: '🚀 Start Continuous Session',
+      text: '🚀 start continuous session',
       cls: 'action-btn continuous-start-btn'
     });
     startBtn.onclick = async () => {
@@ -364,7 +363,7 @@ export class WritingDashboard extends ItemView {
 
     if (currentCount > 0) {
       const resetBtn = actions.createEl('button', {
-        text: '🔄 Reset Progress',
+        text: '🔄 reset progress',
         cls: 'action-btn continuous-reset-btn'
       });
       resetBtn.onclick = async () => {

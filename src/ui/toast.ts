@@ -81,8 +81,10 @@ export class ToastManager {
 
     // Trigger animation
     requestAnimationFrame(() => {
-      el.style.opacity = "0.98";
-      el.style.transform = "translateX(0)";
+      el.setCssProps({
+        opacity: "0.98",
+        transform: "translateX(0)"
+      });
     });
 
     // Auto-remove after duration
@@ -94,8 +96,10 @@ export class ToastManager {
   private removeToast(el: HTMLElement): void {
     if (!this.activeToasts.has(el)) return;
 
-    el.style.opacity = "0";
-    el.style.transform = "translateX(400px)";
+    el.setCssProps({
+      opacity: "0",
+      transform: "translateX(400px)"
+    });
 
     setTimeout(() => {
       if (el.parentElement) {

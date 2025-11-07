@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, Notice, TFile, MarkdownView, ItemView, WorkspaceLeaf } from 'obsidian';
+import { Plugin, Notice, TFile, MarkdownView, ItemView, WorkspaceLeaf } from 'obsidian';
 import { NetworkPromptsService } from './src/core/network-prompts';
 
 // Core modules
@@ -23,6 +23,15 @@ import { DEFAULT_SETTINGS } from './src/types/interfaces';
 
 // Remove duplicate interfaces - using imported ones from types/interfaces.ts
 
+// Plugin data structure
+interface PluginData {
+	settings?: WritingMomentumSettings;
+	sessions?: WritingSession[];
+	writingProfile?: WritingProfile | null;
+	sessionLogs?: SessionLog[];
+	[key: string]: unknown;
+}
+
 const WRITING_PROMPTS = [
 	// Creative Questions
 	"What if gravity worked backwards for one day?",
@@ -30,48 +39,118 @@ const WRITING_PROMPTS = [
 	"What would you tell your younger self?",
 	"If you could have dinner with any historical figure, who would it be and why?",
 	"Describe your perfect day in vivid detail",
-	
+
 	// Reflection Questions
 	"What's the most important lesson you learned recently?",
 	"What are you most grateful for right now?",
 	"What challenge are you currently facing and how might you overcome it?",
 	"What small thing brought you joy today?",
 	"What would you do if you weren't afraid?",
-	
+
 	// Story Starters
 	"The old book opened itself to a page that wasn't there yesterday...",
 	"She found a letter addressed to her, dated 50 years in the future...",
 	"The last person on Earth sat alone in a room. There was a knock at the door...",
 	"Every morning, the same stranger waves at you from their window...",
 	"You wake up with the ability to hear everyone's thoughts, except one person...",
-	
+
 	// Keywords/Themes
 	"Write about: Transformation",
 	"Explore the theme: Hidden connections",
 	"Focus on: Unexpected kindness",
 	"Consider: The space between words",
 	"Reflect on: Moments of change",
-	
-	// Observation Prompts  
+
+	// Observation Prompts
 	"Describe what you can see from where you're sitting",
 	"What sounds do you notice right now?",
 	"Write about a memory triggered by a smell",
 	"Describe a person you saw today without using their appearance",
 	"What's the story behind an object near you?",
-	
+
 	// Emotional Prompts
 	"Write about a time you felt completely understood",
 	"Describe the feeling of coming home",
 	"What does hope look like to you?",
 	"Write about a moment of unexpected courage",
 	"Describe the weight of a secret",
-	
+
 	// Abstract Concepts
 	"If time had a texture, what would it feel like?",
 	"What color is Monday?",
 	"Describe the personality of your favorite room",
 	"What would loneliness say if it could speak?",
-	"Write about the space between heartbeats"
+	"Write about the space between heartbeats",
+
+	// New Creative Scenarios
+	"You discover a door in your house that wasn't there before. Where does it lead?",
+	"Write a conversation between the sun and the moon",
+	"What if plants could walk? Describe their migration patterns",
+	"You find a map with your name on it. What does it show?",
+	"Describe a museum dedicated to forgotten moments",
+
+	// New Reflection Prompts
+	"What truth have you been avoiding?",
+	"Write about the person you're becoming",
+	"What does rest mean to you?",
+	"Describe a belief you've outgrown",
+	"What would your future self thank you for?",
+
+	// Character & Perspective
+	"Tell a story from the perspective of a street lamp",
+	"You can speak to animals for one hour. What do you learn?",
+	"Write about someone's last day at a job they've had for 30 years",
+	"A child explains death to an immortal being",
+	"Describe a villain's morning routine",
+
+	// Philosophical Questions
+	"Is it possible to truly know another person?",
+	"What makes a place feel like home versus just a house?",
+	"Write about the difference between being alone and being lonely",
+	"Can a lie ever be more true than the truth?",
+	"What do we owe to strangers?",
+
+	// Sensory & Atmosphere
+	"Describe the taste of a memory",
+	"Write about the sound of silence in different places",
+	"What does anticipation smell like?",
+	"Describe the texture of trust",
+	"Write about the temperature of different emotions",
+
+	// Unconventional Prompts
+	"You are the author of your life story. Write the chapter you're avoiding",
+	"Objects in your home conspire to tell you something. What is it?",
+	"Write instructions for how to be you",
+	"Describe the world through the eyes of someone seeing it for the last time",
+	"What would your personal mythology be?",
+
+	// Time & Memory
+	"Write about a memory that never happened but feels real",
+	"If you could pause time for one hour every day, what would you do?",
+	"Describe the moment between sleeping and waking",
+	"Write about something you wish you could remember",
+	"What will today look like when it becomes a memory?",
+
+	// Relationships & Connection
+	"Write about a friendship that ended without explanation",
+	"Describe the moment you realized someone truly understood you",
+	"What do you inherit from people you've never met?",
+	"Write about two people who speak different languages finding common ground",
+	"Describe love in a way that's never been described before",
+
+	// Nature & Elements
+	"If seasons had personalities, what would they be like at a dinner party?",
+	"Write about the secret life of clouds",
+	"Describe the ocean's dreams",
+	"What stories do old trees tell each other?",
+	"Write about the journey of a single raindrop",
+
+	// Identity & Self
+	"What parts of yourself do you hide, and why?",
+	"Write about the different versions of you that exist in other people's minds",
+	"Describe the moment you became who you are",
+	"What mask do you wear most often?",
+	"Write a letter to yourself from yourself, ten years from now"
 ];
 
 const QUICK_KEYWORDS = [
@@ -91,7 +170,6 @@ export default class WritingMomentumPlugin extends Plugin {
 	reminderScheduler: ReminderScheduler;
 	statusBarItem: HTMLElement | null = null;
 	currentSession: WritingSession | null = null;
-	sessionHistory: WritingSession[] = []; // Made public for dashboard access
 	private wordCountInterval: number | null = null;
 	randomPrompts: NetworkPromptsService;
 	isMobile: boolean = false;
@@ -105,11 +183,10 @@ export default class WritingMomentumPlugin extends Plugin {
 
 	async onload() {
 		// Detect mobile platform
-		this.isMobile = (this.app as any).isMobile || false;
+		this.isMobile = ('isMobile' in this.app ? (this.app as { isMobile: boolean }).isMobile : false);
 
 		// Load settings and session history
 		await this.loadSettings();
-		await this.loadSessionHistory();
 
 		// Initialize core systems
 		this.dataManager = new DataManager(this);
@@ -120,6 +197,9 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		await this.dataManager.loadData();
 		await this.templateEngine.initialize();
+
+		// Migrate old sessionHistory to new dataManager.sessions system
+		await this.migrateSessionHistory();
 
 		// Initialize random prompts service
 		this.randomPrompts = new NetworkPromptsService(this);
@@ -171,7 +251,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		// Add ribbon icon (always show on mobile for easy access)
 		if (this.settings.ui.showRibbonIcon || this.isMobile) {
-			this.addRibbonIcon('target', 'Writing Momentum', () => {
+			this.addRibbonIcon('target', 'Writing momentum', () => {
 				this.openDashboard();
 			});
 		}
@@ -185,44 +265,50 @@ export default class WritingMomentumPlugin extends Plugin {
 		// Add commands
 		this.addCommand({
 			id: 'open-dashboard',
-			name: 'Open Dashboard',
+			name: 'Open dashboard',
 			callback: () => this.openDashboard()
 		});
 
 		this.addCommand({
 			id: 'start-writing-session',
-			name: 'Start Session',
+			name: 'Start session',
 			callback: () => this.startQuickSession()
 		});
 
 		this.addCommand({
 			id: 'complete-session',
-			name: 'Complete Session',
+			name: 'Complete session',
 			callback: () => this.completeSession()
 		});
 
 		this.addCommand({
 			id: 'quick-note',
-			name: 'Create Quick Note',
+			name: 'Create quick note',
 			callback: () => this.createQuickNote()
 		});
 
 		this.addCommand({
 			id: 'insert-writing-prompt',
-			name: 'Insert Prompt',
+			name: 'Insert prompt',
 			callback: () => this.insertWritingPrompt()
 		});
 
 		this.addCommand({
+			id: 'start-session-current-file',
+			name: 'Start session on current file',
+			callback: () => this.startSessionOnCurrentFile()
+		});
+
+		this.addCommand({
 			id: 'stop-all-timers',
-			name: 'Stop All Timers and Alarms',
+			name: 'Stop all timers and alarms',
 			callback: () => this.stopAllTimers()
 		});
 
 		// Purpose-based commands
 		this.addCommand({
 			id: 'wm-start-purpose-session',
-			name: 'WM: Start Writing Session',
+			name: 'Start writing session',
 			callback: () => {
 				const file = this.app.workspace.getActiveFile();
 				if (file && this.purposeSessionManager) {
@@ -235,7 +321,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'wm-pause-session',
-			name: 'WM: Pause Session',
+			name: 'Pause session',
 			callback: () => {
 				if (this.purposeSessionManager) {
 					this.purposeSessionManager.pauseSession();
@@ -245,7 +331,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'wm-resume-session',
-			name: 'WM: Resume Session',
+			name: 'Resume session',
 			callback: () => {
 				if (this.purposeSessionManager) {
 					this.purposeSessionManager.resumeSession();
@@ -255,7 +341,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'wm-complete-session',
-			name: 'WM: Complete Session',
+			name: 'Complete session',
 			callback: () => {
 				if (this.purposeSessionManager) {
 					this.purposeSessionManager.completeSession();
@@ -265,7 +351,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'wm-skip-session',
-			name: 'WM: Skip Session',
+			name: 'Skip session',
 			callback: () => {
 				if (this.purposeSessionManager) {
 					this.purposeSessionManager.skipSession();
@@ -275,7 +361,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'wm-weekly-summary',
-			name: 'WM: Show Weekly Summary',
+			name: 'Show weekly summary',
 			callback: () => {
 				if (this.activeProfile) {
 					const planner = new WeeklyPlanner(
@@ -290,7 +376,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'wm-run-onboarding',
-			name: 'WM: Re-run Onboarding',
+			name: 'Re-run onboarding',
 			callback: () => {
 				new QaOnboardingWizard(this.app, async (profile) => {
 					this.activeProfile = profile;
@@ -308,7 +394,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'wm-view-qa-answers',
-			name: 'WM: View Q&A Answers',
+			name: 'View answers',
 			callback: () => {
 				if (!this.activeProfile) {
 					this.toastManager.warn('No profile found. Please run onboarding first.');
@@ -348,7 +434,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'wm-recalculate-defaults',
-			name: 'WM: Recalculate Defaults',
+			name: 'Recalculate defaults',
 			callback: async () => {
 				if (!this.activeProfile) {
 					this.toastManager.warn('No profile found. Please run onboarding first.');
@@ -382,6 +468,11 @@ export default class WritingMomentumPlugin extends Plugin {
 	}
 
 	onunload() {
+		// End any active session before closing
+		if (this.currentSession && this.currentSession.active) {
+			this.sessionManager.endSession();
+		}
+
 		this.stopAllTimers();
 
 		// Clean up purpose-based managers
@@ -429,13 +520,13 @@ export default class WritingMomentumPlugin extends Plugin {
 
 	// Purpose-based data management
 	async loadPurposeData() {
-		const data = await this.loadData() as any;
-		this.activeProfile = data.writingProfile || null;
-		this.sessionLogs = data.sessionLogs || [];
+		const data = await this.loadData() as PluginData | null;
+		this.activeProfile = data?.writingProfile || null;
+		this.sessionLogs = data?.sessionLogs || [];
 	}
 
 	async savePurposeData() {
-		const data = await this.loadData() as any;
+		const data = (await this.loadData() as PluginData | null) || {};
 		data.writingProfile = this.activeProfile;
 		data.sessionLogs = this.sessionLogs;
 		await this.saveData(data);
@@ -480,17 +571,33 @@ export default class WritingMomentumPlugin extends Plugin {
 		}
 	}
 
-	async loadSessionHistory() {
+	async migrateSessionHistory() {
+		// Migrate old sessionHistory to new dataManager.sessions system
 		const data = await this.loadData();
-		if (data?.sessionHistory) {
-			this.sessionHistory = data.sessionHistory;
-		}
-	}
+		if (data?.sessionHistory && Array.isArray(data.sessionHistory) && data.sessionHistory.length > 0) {
+			console.debug(`Migrating ${data.sessionHistory.length} sessions from old sessionHistory to dataManager...`);
 
-	async saveSessionHistory() {
-		const currentData = await this.loadData() || {};
-		currentData.sessionHistory = this.sessionHistory;
-		await this.saveData(currentData);
+			// Get existing sessions to avoid duplicates
+			const existingSessions = this.dataManager.getAllSessions();
+			const existingIds = new Set(existingSessions.map(s => s.id));
+
+			// Migrate sessions that don't already exist
+			let migratedCount = 0;
+			for (const session of data.sessionHistory) {
+				if (!existingIds.has(session.id)) {
+					await this.dataManager.addSession(session);
+					migratedCount++;
+				}
+			}
+
+			if (migratedCount > 0) {
+				console.debug(`Successfully migrated ${migratedCount} sessions`);
+
+				// Remove old sessionHistory after successful migration
+				delete data.sessionHistory;
+				await this.saveData(data);
+			}
+		}
 	}
 
 	getRandomPrompt(): string {
@@ -579,7 +686,7 @@ export default class WritingMomentumPlugin extends Plugin {
 		this.refreshDashboard();
 	}
 
-	completeSession() {
+	async completeSession() {
 		if (!this.currentSession) {
 			// new Notice('No active session to complete');
 			return;
@@ -587,14 +694,12 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		this.currentSession.active = false;
 		this.currentSession.endTime = Date.now();
-		const duration = Math.round((Date.now() - this.currentSession.startTime) / 60000);
 
-		// Save to history
-		this.sessionHistory.push({...this.currentSession});
-		this.saveSessionHistory();
+		// Save to dataManager (handles persistence)
+		await this.dataManager.addSession({...this.currentSession});
 
 		if (this.settings.enableNotifications) {
-			const message = `Session completed! ${this.currentSession.wordCount} words in ${duration} minutes 🎉`;
+			// const message = `Session completed! ${this.currentSession.wordCount} words in ${duration} minutes 🎉`;
 			// new Notice(message);
 		}
 
@@ -679,7 +784,7 @@ export default class WritingMomentumPlugin extends Plugin {
 				const wordCount = this.countWords(content);
 				this.currentSession.wordCount = wordCount;
 				this.updateStatusBar();
-			} catch (error) {
+			} catch {
 				// Failed to read file, continue silently
 			}
 		}
@@ -707,7 +812,7 @@ export default class WritingMomentumPlugin extends Plugin {
 			const pauseIndicator = this.currentSession.paused ? ' ⏸️' : '';
 			this.statusBarItem.setText(`✍️ ${this.currentSession.wordCount} words (${duration}m)${pauseIndicator}`);
 		} else {
-			this.statusBarItem.setText('📝 Ready to write');
+			this.statusBarItem.setText('📝 ready to write');
 		}
 	}
 
@@ -755,11 +860,97 @@ export default class WritingMomentumPlugin extends Plugin {
 		}
 	}
 
+	async startSessionOnCurrentFile() {
+		// Get the currently active file
+		const activeFile = this.app.workspace.getActiveFile();
+
+		if (!activeFile) {
+			new Notice('Please open a file first to start a writing session');
+			return;
+		}
+
+		// Check if there's already an active session
+		if (this.currentSession && this.currentSession.active) {
+			new Notice('A session is already active. Please complete or end it first.');
+			return;
+		}
+
+		try {
+			// Get goal target for the session
+			let targetWordCount = 0;
+			if (this.activeProfile && this.activeProfile.recommendation) {
+				const rec = this.activeProfile.recommendation;
+				if (rec.target.type === 'words') {
+					targetWordCount = rec.target.value;
+				}
+			} else if (this.settings.streakRule.mode === 'daily') {
+				targetWordCount = this.settings.streakRule.target;
+			}
+
+			// Start a new session on the current file
+			const sessionId = `session-${Date.now()}`;
+			const today = new Date().toISOString().split('T')[0];
+
+			this.currentSession = {
+				id: sessionId,
+				date: today,
+				startTime: Date.now(),
+				wordCount: 0,
+				targetCount: targetWordCount > 0 ? targetWordCount : undefined,
+				files: [activeFile.path],
+				completed: false,
+				active: true,
+				paused: false,
+				totalPausedDuration: 0,
+				filePath: activeFile.path
+			};
+
+			// Start word count monitoring (SessionManager will save to dataManager when session ends)
+			this.sessionManager.startSession(activeFile.path, undefined, targetWordCount > 0 ? targetWordCount : undefined);
+
+			// Show notification
+			if (this.settings.ui.notifications) {
+				const targetMsg = targetWordCount > 0 ? ` Target: ${targetWordCount} words` : '';
+				new Notice(`Writing session started on "${activeFile.basename}"!${targetMsg}`);
+			}
+
+			// Refresh dashboard if open
+			this.app.workspace.getLeavesOfType('writing-momentum-dashboard').forEach(leaf => {
+				if (leaf.view instanceof ItemView && 'refresh' in leaf.view && typeof leaf.view.refresh === 'function') {
+					leaf.view.refresh();
+				}
+			});
+		} catch (error) {
+			new Notice(`Failed to start session: ${error.message}`);
+		}
+	}
+
 	async createTemplateNoteAndStartSession() {
-		// Show template selection dialog
-		const selectedTemplate = await this.showTemplateSelectionDialog();
-		if (!selectedTemplate) {
-			return; // User cancelled
+		// Check if we should use active template directly
+		let selectedTemplate;
+
+		if (this.settings.alwaysUseActiveTemplate) {
+			// Use active template without showing dialog
+			const activeTemplate = this.templateManager.getActiveTemplate();
+			if (activeTemplate) {
+				selectedTemplate = {
+					name: activeTemplate.name,
+					title: activeTemplate.titlePattern,
+					template: activeTemplate.content
+				};
+			} else {
+				// No active template set, show dialog
+				selectedTemplate = await this.showTemplateSelectionDialog();
+				if (!selectedTemplate) {
+					return; // User cancelled
+				}
+			}
+		} else {
+			// Show template selection dialog
+			selectedTemplate = await this.showTemplateSelectionDialog();
+			if (!selectedTemplate) {
+				return; // User cancelled
+			}
 		}
 
 		try {
@@ -843,17 +1034,17 @@ export default class WritingMomentumPlugin extends Plugin {
 			dialog.className = 'template-selection-dialog';
 
 			// Create header
-			const header = dialog.createEl('h2', { text: 'Choose Writing Template' });
-			const description = dialog.createEl('p', { text: 'Select a template to start your writing session:' });
+			dialog.createEl('h2', { text: 'Choose writing template' });
+			dialog.createEl('p', { text: 'Select a template to start your writing session:' });
 			const optionsContainer = dialog.createEl('div', { cls: 'template-options' });
 			const buttonsContainer = dialog.createEl('div', { cls: 'template-dialog-buttons' });
 			const cancelBtn = buttonsContainer.createEl('button', { text: 'Cancel', cls: 'cancel-btn' });
 
-			templates.forEach((template, index) => {
+			templates.forEach((template) => {
 				const option = optionsContainer.createEl('div', { cls: 'template-option' });
 
-				const templateName = option.createEl('h3', { text: template.name });
-				const templateDesc = option.createEl('p', { text: template.description });
+				option.createEl('h3', { text: template.name });
+				option.createEl('p', { text: template.description });
 
 				option.addEventListener('click', () => {
 					document.body.removeChild(modal);
@@ -1035,7 +1226,7 @@ class WritingDashboard extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'Writing Dashboard';
+		return 'Writing dashboard';
 	}
 
 	getIcon(): string {
@@ -1096,6 +1287,105 @@ class WritingDashboard extends ItemView {
 		if (wordCountElement && this.plugin.currentSession && this.plugin.currentSession.active) {
 			wordCountElement.textContent = this.plugin.currentSession.wordCount.toString();
 		}
+
+		// Update today's goal progress in real-time
+		this.updateGoalProgress();
+	}
+
+	private updateGoalProgress() {
+		// Determine goal type and target from active profile or fallback to streakRule
+		let goalType: 'words' | 'minutes' = 'words';
+		let dailyTarget = 0;
+
+		if (this.plugin.activeProfile && this.plugin.activeProfile.recommendation) {
+			const rec = this.plugin.activeProfile.recommendation;
+			goalType = rec.target.type;
+			dailyTarget = rec.target.value;
+		} else if (this.plugin.settings.streakRule.mode === 'daily') {
+			goalType = 'words';
+			dailyTarget = this.plugin.settings.streakRule.target;
+		} else {
+			goalType = 'words';
+			dailyTarget = Math.round(this.plugin.settings.streakRule.target / 7);
+		}
+
+		// Get today's progress
+		const today = new Date().toISOString().split('T')[0];
+		let currentProgress = 0;
+
+		if (goalType === 'words') {
+			// Calculate today's word count (including active session)
+			const allSessions = this.plugin.dataManager.getAllSessions();
+			currentProgress = allSessions
+				.filter(session => session.date === today && session.endTime)
+				.reduce((sum, session) => sum + session.wordCount, 0);
+
+			// Add current active session if exists
+			if (this.plugin.currentSession && this.plugin.currentSession.active && this.plugin.currentSession.date === today) {
+				currentProgress += this.plugin.currentSession.wordCount || 0;
+			}
+		} else {
+			// Calculate today's writing time in minutes (including active session)
+			const allSessions = this.plugin.dataManager.getAllSessions();
+			let totalMs = allSessions
+				.filter(session => session.date === today && session.endTime && session.startTime)
+				.reduce((sum, session) => sum + (session.endTime! - session.startTime), 0);
+
+			// Add current active session if exists
+			if (this.plugin.currentSession && this.plugin.currentSession.active && this.plugin.currentSession.date === today) {
+				let effectiveDuration = Date.now() - this.plugin.currentSession.startTime - (this.plugin.currentSession.totalPausedDuration || 0);
+				if (this.plugin.currentSession.paused && this.plugin.currentSession.pausedTime) {
+					effectiveDuration -= (Date.now() - this.plugin.currentSession.pausedTime);
+				}
+				totalMs += effectiveDuration;
+			}
+
+			currentProgress = Math.floor(totalMs / 60000); // Convert to minutes
+		}
+
+		// Calculate percentage
+		const percentage = Math.min((currentProgress / dailyTarget) * 100, 100);
+		const isGoalMet = currentProgress >= dailyTarget;
+
+		// Update progress ring
+		const progressRing = this.containerEl.querySelector('.goal-progress-ring') as SVGCircleElement;
+		if (progressRing) {
+			const circumference = 2 * Math.PI * 70;
+			const offset = circumference - (percentage / 100) * circumference;
+			progressRing.setAttribute('stroke-dashoffset', offset.toString());
+			progressRing.setAttribute('stroke', isGoalMet ? 'var(--color-green)' : 'var(--interactive-accent)');
+		}
+
+		// Update current value
+		const currentValueElement = this.containerEl.querySelector('.goal-current-value');
+		if (currentValueElement) {
+			currentValueElement.textContent = currentProgress.toString();
+		}
+
+		// Update percentage
+		const percentageElement = this.containerEl.querySelector('.goal-percentage');
+		if (percentageElement) {
+			percentageElement.textContent = Math.round(percentage) + '%';
+		}
+
+		// Update status message
+		const statusElement = this.containerEl.querySelector('.goal-status');
+		if (statusElement) {
+			statusElement.empty();
+			if (isGoalMet) {
+				statusElement.createEl('span', {
+					text: '🎉 goal achieved',
+					cls: 'goal-status-achieved'
+				});
+			} else {
+				const remaining = dailyTarget - currentProgress;
+				const unit = goalType === 'words' ? 'words' : 'minutes';
+				statusElement.createEl('span', {
+					text: `${remaining} ${unit} to go`,
+					cls: 'goal-status-remaining'
+				});
+			}
+		}
 	}
 
 	render() {
@@ -1110,7 +1400,7 @@ class WritingDashboard extends ItemView {
 
 		// Header
 		const header = container.createEl('div', { cls: 'dashboard-header' });
-		header.createEl('h2', { text: 'Writing Dashboard', cls: 'dashboard-title' });
+		header.createEl('h2', { text: 'Writing dashboard', cls: 'dashboard-title' });
 
 		// Current Session
 		this.renderCurrentSession(container);
@@ -1137,11 +1427,10 @@ class WritingDashboard extends ItemView {
 			if (session.paused && session.pausedTime) {
 				effectiveDuration -= (Date.now() - session.pausedTime);
 			}
-			const duration = Math.round(effectiveDuration / 60000);
 			
 			// Add pause indicator to header
-			const sessionHeader = sessionEl.createEl('h3', { 
-				text: session.paused ? '🎯 Current Session (Paused)' : '🎯 Current Session'
+			const sessionHeader = sessionEl.createEl('h3', {
+				text: session.paused ? '🎯 Current session (paused)' : '🎯 Current session'
 			});
 			if (session.paused) {
 				sessionHeader.addClass('paused-session');
@@ -1175,8 +1464,8 @@ class WritingDashboard extends ItemView {
 			
 			const actionsEl = sessionEl.createEl('div', { cls: 'session-actions' });
 			
-			const completeBtn = actionsEl.createEl('button', { 
-				text: '✅ Complete Session',
+			const completeBtn = actionsEl.createEl('button', {
+				text: '✅ complete session',
 				cls: 'session-btn complete-btn'
 			});
 			completeBtn.onclick = () => {
@@ -1184,8 +1473,8 @@ class WritingDashboard extends ItemView {
 				this.render();
 			};
 		} else {
-			sessionEl.createEl('p', { 
-				text: '💤 No active session. Open a markdown file and click the ribbon icon to start!',
+			sessionEl.createEl('p', {
+				text: '💤 no active session',
 				cls: 'no-session-message'
 			});
 		}
@@ -1196,7 +1485,7 @@ class WritingDashboard extends ItemView {
 		
 		// Header with refresh button
 		const promptHeader = promptCard.createEl('div', { cls: 'prompt-header' });
-		promptHeader.createEl('span', { text: '✨ Writing Inspiration', cls: 'prompt-title' });
+		promptHeader.createEl('span', { text: '✨ writing inspiration', cls: 'prompt-title' });
 		
 		const refreshPromptBtn = promptHeader.createEl('button', { 
 			text: '🎲',
@@ -1214,7 +1503,7 @@ class WritingDashboard extends ItemView {
 		
 		const keywordContainer = keywordSection.createEl('span', { cls: 'keywords' });
 		for (let i = 0; i < 3; i++) {
-			const keyword = keywordContainer.createEl('span', { 
+			keywordContainer.createEl('span', {
 				text: this.plugin.getRandomKeyword(),
 				cls: 'keyword-tag'
 			});
@@ -1224,8 +1513,8 @@ class WritingDashboard extends ItemView {
 		}
 		
 		// Copy to clipboard button
-		const copyBtn = promptCard.createEl('button', { 
-			text: '📋 Copy to Clipboard',
+		const copyBtn = promptCard.createEl('button', {
+			text: '📋 copy to clipboard',
 			cls: 'copy-prompt-btn'
 		});
 		
@@ -1236,7 +1525,7 @@ class WritingDashboard extends ItemView {
 			// Refresh keywords
 			keywordContainer.empty();
 			for (let i = 0; i < 3; i++) {
-				const keyword = keywordContainer.createEl('span', { 
+				keywordContainer.createEl('span', {
 					text: this.plugin.getRandomKeyword(),
 					cls: 'keyword-tag'
 				});
@@ -1254,11 +1543,11 @@ class WritingDashboard extends ItemView {
 			
 			try {
 				await navigator.clipboard.writeText(textToCopy);
-				copyBtn.setText('✅ Copied!');
+				copyBtn.setText('✅ copied!');
 				setTimeout(() => {
-					copyBtn.setText('📋 Copy to Clipboard');
+					copyBtn.setText('📋 copy to clipboard');
 				}, 2000);
-			} catch (error) {
+			} catch {
 				// Fallback for older browsers
 				const textArea = document.createElement('textarea');
 				textArea.value = textToCopy;
@@ -1266,9 +1555,9 @@ class WritingDashboard extends ItemView {
 				textArea.select();
 				document.execCommand('copy');
 				document.body.removeChild(textArea);
-				copyBtn.setText('✅ Copied!');
+				copyBtn.setText('✅ copied!');
 				setTimeout(() => {
-					copyBtn.setText('📋 Copy to Clipboard');
+					copyBtn.setText('📋 copy to clipboard');
 				}, 2000);
 			}
 		};
@@ -1276,16 +1565,25 @@ class WritingDashboard extends ItemView {
 
 	private renderWritingMode(container: Element) {
 		const actionsEl = container.createEl('div', { cls: 'dashboard-section' });
-		actionsEl.createEl('h3', { text: 'Writing Mode' });
+		actionsEl.createEl('h3', { text: 'Writing mode' });
 
 		const buttonsEl = actionsEl.createEl('div', { cls: 'action-buttons' });
 
 		const startSessionBtn = buttonsEl.createEl('button', {
-			text: '🚀 Start Session',
+			text: '🚀 start new note',
 			cls: 'action-btn start-session-btn'
 		});
 		startSessionBtn.onclick = async () => {
 			await this.plugin.createTemplateNoteAndStartSession();
+			// Dashboard will refresh automatically when session starts
+		};
+
+		const startWithoutTemplateBtn = buttonsEl.createEl('button', {
+			text: '✏️ start on current file',
+			cls: 'action-btn start-current-file-btn'
+		});
+		startWithoutTemplateBtn.onclick = async () => {
+			await this.plugin.startSessionOnCurrentFile();
 			// Dashboard will refresh automatically when session starts
 		};
 	}
@@ -1293,178 +1591,307 @@ class WritingDashboard extends ItemView {
 
 	private renderWritingVolumeChart(container: Element) {
 		const chartEl = container.createEl('div', { cls: 'dashboard-section' });
-		chartEl.createEl('h3', { text: 'Writing Volume' });
-		
+		chartEl.createEl('h3', { text: 'Writing progress' });
+
 		// Create chart container
 		const chartContainer = chartEl.createEl('div', { cls: 'chart-container' });
-		
-		// Render weekly chart
-		this.renderWeeklyChart(chartContainer);
-		
-		// Render monthly chart
-		this.renderMonthlyChart(chartContainer);
-		
-		// Show current totals
-		this.renderVolumeTotals(chartContainer);
+
+		// Render today's goal achievement
+		this.renderTodaysGoal(chartContainer);
+
+		// Render contribution heatmap
+		this.renderContributionHeatmap(chartContainer);
 	}
 
-	private renderWeeklyChart(container: Element) {
-		const weeklyEl = container.createEl('div', { cls: 'weekly-chart' });
-		weeklyEl.createEl('h4', { text: 'Last 7 Days' });
-		
-		const chartEl = weeklyEl.createEl('div', { cls: 'bar-chart' });
-		
-		// Get last 7 days of data
-		const weeklyData = this.getWeeklyData();
-		const maxWords = Math.max(...weeklyData.map(d => d.words), 100);
-		
-		weeklyData.forEach((day, index) => {
-			const barContainer = chartEl.createEl('div', { cls: 'bar-container' });
-			
-			// Day label
-			const dayLabel = barContainer.createEl('div', { cls: 'bar-label' });
-			dayLabel.setText(day.label);
-			
-			// Bar
-			const bar = barContainer.createEl('div', { cls: 'bar' });
-			const height = Math.max((day.words / maxWords) * 100, 2); // Minimum 2% height
-			// Use CSS class for height instead of inline style
-			const heightPercentage = Math.min(Math.round(height / 5) * 5, 100); // Round to nearest 5
-			bar.addClass(`bar-height-${heightPercentage}`);
-			bar.addClass(day.words > 0 ? 'has-data' : 'no-data');
-			
-			// Word count tooltip
-			bar.title = `${day.words} words`;
-			
-			// Word count label
-			if (day.words > 0) {
-				const wordLabel = barContainer.createEl('div', { cls: 'word-count' });
-				wordLabel.setText(day.words.toString());
+	private renderTodaysGoal(container: Element) {
+		const goalEl = container.createEl('div', { cls: 'todays-goal' });
+
+		// Determine goal type and target from active profile or fallback to streakRule
+		let goalType: 'words' | 'minutes' = 'words';
+		let dailyTarget = 0;
+
+		if (this.plugin.activeProfile && this.plugin.activeProfile.recommendation) {
+			const rec = this.plugin.activeProfile.recommendation;
+			goalType = rec.target.type;
+
+			// Calculate daily target from weekly target
+			// If sessionsPerWeek is set, divide by that; otherwise assume 5 days per week
+			// const sessionsPerWeek = rec.sessionsPerWeek || 5;
+			dailyTarget = rec.target.value;
+		} else if (this.plugin.settings.streakRule.mode === 'daily') {
+			// Fallback to old system - assume it's words per day
+			goalType = 'words';
+			dailyTarget = this.plugin.settings.streakRule.target;
+		} else {
+			// Weekly mode - divide by 7 for daily average
+			goalType = 'words';
+			dailyTarget = Math.round(this.plugin.settings.streakRule.target / 7);
+		}
+
+		// Get today's progress
+		const today = new Date().toISOString().split('T')[0];
+		let currentProgress = 0;
+		let currentProgressDisplay = '';
+
+		if (goalType === 'words') {
+			// Calculate today's word count (including active session)
+			const allSessions = this.plugin.dataManager.getAllSessions();
+			currentProgress = allSessions
+				.filter(session => session.date === today && session.endTime)
+				.reduce((sum, session) => sum + session.wordCount, 0);
+
+			// Add current active session if exists
+			if (this.plugin.currentSession && this.plugin.currentSession.active && this.plugin.currentSession.date === today) {
+				currentProgress += this.plugin.currentSession.wordCount || 0;
 			}
-		});
-	}
 
-	private renderMonthlyChart(container: Element) {
-		const monthlyEl = container.createEl('div', { cls: 'monthly-chart' });
-		monthlyEl.createEl('h4', { text: 'Last 30 Days' });
-		
-		const chartEl = monthlyEl.createEl('div', { cls: 'line-chart' });
-		
-		// Get last 30 days of data
-		const monthlyData = this.getMonthlyData();
-		const maxWords = Math.max(...monthlyData.map(d => d.words), 100);
-		
-		// Create SVG element using DOM API instead of innerHTML
+			currentProgressDisplay = currentProgress.toString();
+		} else {
+			// Calculate today's writing time in minutes (including active session)
+			const allSessions = this.plugin.dataManager.getAllSessions();
+			let totalMs = allSessions
+				.filter(session => session.date === today && session.endTime && session.startTime)
+				.reduce((sum, session) => sum + (session.endTime! - session.startTime), 0);
+
+			// Add current active session if exists
+			if (this.plugin.currentSession && this.plugin.currentSession.active && this.plugin.currentSession.date === today) {
+				let effectiveDuration = Date.now() - this.plugin.currentSession.startTime - (this.plugin.currentSession.totalPausedDuration || 0);
+				if (this.plugin.currentSession.paused && this.plugin.currentSession.pausedTime) {
+					effectiveDuration -= (Date.now() - this.plugin.currentSession.pausedTime);
+				}
+				totalMs += effectiveDuration;
+			}
+
+			currentProgress = Math.floor(totalMs / 60000); // Convert to minutes
+			currentProgressDisplay = currentProgress.toString();
+		}
+
+		// Calculate percentage
+		const percentage = Math.min((currentProgress / dailyTarget) * 100, 100);
+		const isGoalMet = currentProgress >= dailyTarget;
+
+		// Header
+		goalEl.createEl('h4', { text: "Today's goal" });
+
+		// Progress ring
+		const ringContainer = goalEl.createEl('div', { cls: 'goal-ring-container' });
 		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-		svg.setAttribute('class', 'chart-svg');
-		svg.setAttribute('width', '100%');
-		svg.setAttribute('height', '120');
-		svg.setAttribute('viewBox', '0 0 400 120');
+		svg.setAttribute('class', 'goal-ring');
+		svg.setAttribute('width', '160');
+		svg.setAttribute('height', '160');
+		svg.setAttribute('viewBox', '0 0 160 160');
 
-		// Create path for line chart
-		this.createSVGPath(svg, monthlyData, maxWords);
-		this.createSVGDots(svg, monthlyData, maxWords);
+		// Background circle
+		const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+		bgCircle.setAttribute('cx', '80');
+		bgCircle.setAttribute('cy', '80');
+		bgCircle.setAttribute('r', '70');
+		bgCircle.setAttribute('fill', 'none');
+		bgCircle.setAttribute('stroke', 'var(--background-modifier-border)');
+		bgCircle.setAttribute('stroke-width', '12');
+		svg.appendChild(bgCircle);
 
-		chartEl.appendChild(svg);
-	}
+		// Progress circle
+		const circumference = 2 * Math.PI * 70;
+		const offset = circumference - (percentage / 100) * circumference;
 
-	private renderVolumeTotals(container: Element) {
-		const totalsEl = container.createEl('div', { cls: 'volume-totals' });
-		
-		const weekTotal = this.getWeeklyData().reduce((sum, day) => sum + day.words, 0);
-		const monthTotal = this.getMonthlyData().reduce((sum, day) => sum + day.words, 0);
-		
-		const weekCard = totalsEl.createEl('div', { cls: 'volume-card' });
-		weekCard.createEl('div', { text: weekTotal.toString(), cls: 'volume-number' });
-		weekCard.createEl('div', { text: 'Words This Week', cls: 'volume-label' });
-		
-		const monthCard = totalsEl.createEl('div', { cls: 'volume-card' });
-		monthCard.createEl('div', { text: monthTotal.toString(), cls: 'volume-number' });
-		monthCard.createEl('div', { text: 'Words This Month', cls: 'volume-label' });
-	}
+		const progressCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+		progressCircle.setAttribute('cx', '80');
+		progressCircle.setAttribute('cy', '80');
+		progressCircle.setAttribute('r', '70');
+		progressCircle.setAttribute('fill', 'none');
+		progressCircle.setAttribute('stroke', isGoalMet ? 'var(--color-green)' : 'var(--interactive-accent)');
+		progressCircle.setAttribute('stroke-width', '12');
+		progressCircle.setAttribute('stroke-dasharray', circumference.toString());
+		progressCircle.setAttribute('stroke-dashoffset', offset.toString());
+		progressCircle.setAttribute('stroke-linecap', 'round');
+		progressCircle.setAttribute('transform', 'rotate(-90 80 80)');
+		progressCircle.setAttribute('class', 'goal-progress-ring');
+		svg.appendChild(progressCircle);
 
-	private createSVGPath(svg: SVGElement, monthlyData: {date: string; words: number}[], maxWords: number): void {
-		let pathData = '';
-		monthlyData.forEach((day, index) => {
-			const x = (index / (monthlyData.length - 1)) * 380 + 10;
-			const y = 100 - ((day.words / maxWords) * 80);
-			pathData += (index === 0 ? 'M' : 'L') + ` ${x} ${y}`;
+		ringContainer.appendChild(svg);
+
+		// Center text with proper units
+		const centerText = ringContainer.createEl('div', { cls: 'goal-center-text' });
+		centerText.createEl('div', {
+			text: currentProgressDisplay,
+			cls: 'goal-current-words goal-current-value'
+		});
+		centerText.createEl('div', {
+			text: `/ ${dailyTarget} ${goalType === 'words' ? 'words' : 'min'}`,
+			cls: 'goal-target-words'
+		});
+		centerText.createEl('div', {
+			text: Math.round(percentage) + '%',
+			cls: 'goal-percentage'
 		});
 
-		const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-		path.setAttribute('d', pathData);
-		path.setAttribute('fill', 'none');
-		path.setAttribute('stroke', 'var(--interactive-accent)');
-		path.setAttribute('stroke-width', '2');
-		path.setAttribute('class', 'chart-svg-path');
-		svg.appendChild(path);
+		// Status message with proper units
+		const statusEl = goalEl.createEl('div', { cls: 'goal-status' });
+		if (isGoalMet) {
+			statusEl.createEl('span', {
+				text: '🎉 goal achieved',
+				cls: 'goal-status-achieved'
+			});
+		} else {
+			const remaining = dailyTarget - currentProgress;
+			const unit = goalType === 'words' ? 'words' : 'minutes';
+			statusEl.createEl('span', {
+				text: `${remaining} ${unit} to go`,
+				cls: 'goal-status-remaining'
+			});
+		}
 	}
 
-	private createSVGDots(svg: SVGElement, monthlyData: {date: string; words: number}[], maxWords: number): void {
-		monthlyData.forEach((day, index) => {
-			if (day.words > 0) {
-				const x = (index / (monthlyData.length - 1)) * 380 + 10;
-				const y = 100 - ((day.words / maxWords) * 80);
+	private renderContributionHeatmap(container: Element) {
+		const heatmapEl = container.createEl('div', { cls: 'contribution-heatmap' });
+		heatmapEl.createEl('h4', { text: 'Goal achievement history' });
 
-				const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-				circle.setAttribute('cx', x.toString());
-				circle.setAttribute('cy', y.toString());
-				circle.setAttribute('r', '3');
-				circle.setAttribute('fill', 'var(--interactive-accent)');
-				circle.setAttribute('class', 'chart-svg-circle');
+		// Get last 12 weeks of data (84 days)
+		const heatmapData = this.getHeatmapData();
 
-				const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-				title.textContent = `${day.date}: ${day.words} words`;
-				circle.appendChild(title);
+		// Determine daily goal target (only support word-based goals in heatmap for now)
+		let dailyTarget = 0;
+		if (this.plugin.activeProfile && this.plugin.activeProfile.recommendation) {
+			const rec = this.plugin.activeProfile.recommendation;
+			// For time-based goals, we can't easily show in heatmap as it requires session duration data
+			// So we'll use word count from heatmap data
+			if (rec.target.type === 'words') {
+				dailyTarget = rec.target.value;
+			} else {
+				// For minute-based goals, we'll just use a default or skip intensity calculation
+				dailyTarget = 500; // Default fallback for time-based goals
+			}
+		} else if (this.plugin.settings.streakRule.mode === 'daily') {
+			dailyTarget = this.plugin.settings.streakRule.target;
+		} else {
+			dailyTarget = Math.round(this.plugin.settings.streakRule.target / 7);
+		}
 
-				svg.appendChild(circle);
+		const goalTarget = dailyTarget;
+
+		// Create month labels
+		const monthLabels = heatmapEl.createEl('div', { cls: 'heatmap-months' });
+		const months = this.getMonthLabels(heatmapData);
+		months.forEach(month => {
+			monthLabels.createEl('span', {
+				text: month.label,
+				cls: 'month-label'
+			});
+		});
+
+		// Create grid with day labels
+		const gridWrapper = heatmapEl.createEl('div', { cls: 'heatmap-wrapper' });
+
+		// Day labels (M, W, F)
+		const dayLabels = gridWrapper.createEl('div', { cls: 'heatmap-day-labels' });
+		['Mon', 'Wed', 'Fri'].forEach((day, idx) => {
+			const label = dayLabels.createEl('div', { cls: 'day-label' });
+			label.style.gridRow = (idx * 2 + 2).toString();
+			label.setText(day);
+		});
+
+		// Create grid cells
+		const grid = gridWrapper.createEl('div', { cls: 'heatmap-cells' });
+
+		// Group by weeks
+		const weeks: Array<Array<typeof heatmapData[0]>> = [];
+		for (let i = 0; i < heatmapData.length; i += 7) {
+			weeks.push(heatmapData.slice(i, i + 7));
+		}
+
+		weeks.forEach((week, weekIdx) => {
+			week.forEach((day, dayIdx) => {
+				const cell = grid.createEl('div', { cls: 'heatmap-cell' });
+
+				// Determine intensity based on goal achievement
+				let intensity = 'none';
+				if (day.words > 0) {
+					const percentOfGoal = (day.words / goalTarget) * 100;
+					if (percentOfGoal >= 100) {
+						intensity = 'high';
+					} else if (percentOfGoal >= 75) {
+						intensity = 'medium';
+					} else if (percentOfGoal >= 25) {
+						intensity = 'low';
+					} else {
+						intensity = 'minimal';
+					}
+				}
+
+				cell.addClass(`intensity-${intensity}`);
+				cell.title = `${day.date}: ${day.words} words`;
+
+				// Position in grid
+				cell.style.gridColumn = (weekIdx + 2).toString();
+				cell.style.gridRow = (dayIdx + 1).toString();
+			});
+		});
+
+		// Legend
+		const legend = heatmapEl.createEl('div', { cls: 'heatmap-legend' });
+		legend.createEl('span', { text: 'Less', cls: 'legend-label' });
+		['none', 'minimal', 'low', 'medium', 'high'].forEach(level => {
+			const box = legend.createEl('div', { cls: 'legend-box' });
+			box.addClass(`intensity-${level}`);
+		});
+		legend.createEl('span', { text: 'More', cls: 'legend-label' });
+	}
+
+	private getHeatmapData() {
+		const data = [];
+		const today = new Date();
+
+		// Get all sessions from dataManager
+		const allSessions = this.plugin.dataManager.getAllSessions();
+
+		// Get last 84 days (12 weeks)
+		for (let i = 83; i >= 0; i--) {
+			const date = new Date(today);
+			date.setDate(today.getDate() - i);
+			const dateStr = date.toISOString().split('T')[0];
+
+			const dayWords = allSessions
+				.filter(session => session.date === dateStr && session.endTime)
+				.reduce((sum, session) => sum + session.wordCount, 0);
+
+			data.push({
+				date: dateStr,
+				words: dayWords,
+				dayOfWeek: date.getDay()
+			});
+		}
+
+		// Pad to start on Sunday
+		const firstDayOfWeek = data[0].dayOfWeek;
+		for (let i = 0; i < firstDayOfWeek; i++) {
+			data.unshift({ date: '', words: 0, dayOfWeek: i });
+		}
+
+		return data;
+	}
+
+	private getMonthLabels(heatmapData: Array<{date: string; words: number}>) {
+		const months: Array<{label: string; week: number}> = [];
+		let currentMonth = -1;
+
+		heatmapData.forEach((day, index) => {
+			if (!day.date) return;
+
+			const date = new Date(day.date);
+			const month = date.getMonth();
+			const weekIndex = Math.floor(index / 7);
+
+			if (month !== currentMonth) {
+				currentMonth = month;
+				months.push({
+					label: date.toLocaleDateString('en-US', { month: 'short' }),
+					week: weekIndex
+				});
 			}
 		});
-	}
 
-	private getWeeklyData() {
-		const data = [];
-		const today = new Date();
-		
-		for (let i = 6; i >= 0; i--) {
-			const date = new Date(today);
-			date.setDate(today.getDate() - i);
-			const dateStr = date.toISOString().split('T')[0];
-			
-			const dayWords = this.plugin.sessionHistory
-				.filter(session => session.date === dateStr && session.endTime)
-				.reduce((sum, session) => sum + session.wordCount, 0);
-			
-			data.push({
-				date: dateStr,
-				label: date.toLocaleDateString('en-US', { weekday: 'short' }),
-				words: dayWords
-			});
-		}
-		
-		return data;
-	}
-
-	private getMonthlyData() {
-		const data = [];
-		const today = new Date();
-		
-		for (let i = 29; i >= 0; i--) {
-			const date = new Date(today);
-			date.setDate(today.getDate() - i);
-			const dateStr = date.toISOString().split('T')[0];
-			
-			const dayWords = this.plugin.sessionHistory
-				.filter(session => session.date === dateStr && session.endTime)
-				.reduce((sum, session) => sum + session.wordCount, 0);
-			
-			data.push({
-				date: dateStr,
-				words: dayWords
-			});
-		}
-		
-		return data;
+		return months;
 	}
 
 	refresh() {

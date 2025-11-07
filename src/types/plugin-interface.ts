@@ -1,5 +1,5 @@
 import { App, Plugin, PluginManifest, TFile } from 'obsidian';
-import type { WritingMomentumSettings, WritingSession, DashboardStats, SessionLog, WritingProfile } from './interfaces';
+import type { WritingMomentumSettings, WritingSession, DashboardStats, SessionLog, WritingProfile, Template } from './interfaces';
 import type { PurposeSessionManager } from '../core/purpose-session-manager';
 
 // Define proper interfaces for the various managers
@@ -43,20 +43,20 @@ export interface IRandomPrompts {
 }
 
 export interface ITemplateManager {
-	getAllTemplates(): any[];
-	getTemplate(templateId: string): any | null;
-	getActiveTemplate(): any | null;
+	getAllTemplates(): Template[];
+	getTemplate(templateId: string): Template | null;
+	getActiveTemplate(): Template | null;
 	setActiveTemplate(templateId: string): Promise<void>;
-	createTemplate(name: string, titlePattern: string, content: string, options?: any): Promise<any>;
-	updateTemplate(templateId: string, updates: any): Promise<any>;
+	createTemplate(name: string, titlePattern: string, content: string, options?: Partial<Template>): Promise<Template>;
+	updateTemplate(templateId: string, updates: Partial<Template>): Promise<Template>;
 	renameTemplate(templateId: string, newName: string): Promise<void>;
 	deleteTemplate(templateId: string): Promise<void>;
-	duplicateTemplate(templateId: string, newName?: string): Promise<any>;
+	duplicateTemplate(templateId: string, newName?: string): Promise<Template>;
 	validateTemplate(titlePattern: string, content: string): { valid: boolean; errors: string[] };
 	exportTemplates(): string;
 	importTemplates(jsonString: string): Promise<number>;
-	getUserTemplates(): any[];
-	getBuiltInTemplates(): any[];
+	getUserTemplates(): Template[];
+	getBuiltInTemplates(): Template[];
 }
 
 export interface IWritingMomentumPlugin extends Plugin {
