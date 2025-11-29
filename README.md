@@ -3,6 +3,8 @@
 > **Goal:** An Obsidian plugin that helps users write consistently. Focused on session tracking and writing momentum. Minimal friction, maximum persistence.
 
 **Vision:** "Start writing, track progress, build habits"
+## Demo
+[![Demo](./image/demo.gif)](./image/demo.gif)
 
 ## Features
 
