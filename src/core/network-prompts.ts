@@ -1,5 +1,5 @@
 import type { IWritingMomentumPlugin } from '../types/plugin-interface';
-import { TFile } from 'obsidian';
+import { TFile, requestUrl } from 'obsidian';
 
 interface PromptSource {
   name: string;
@@ -134,17 +134,18 @@ export class NetworkPromptsService {
 
   private async fetchFromSource(source: PromptSource): Promise<string[]> {
     try {
-      const response = await fetch(source.url, {
+      const response = await requestUrl({
+        url: source.url,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (response.status !== 200) {
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      const text = await response.text();
+      const text = response.text;
 
       if (source.transform) {
         const result = source.transform(text);

@@ -267,21 +267,23 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				.addButton(button => button
 					.setButtonText('Reset')
 					.setClass('mod-warning')
-					.onClick(async () => {
+					.onClick(() => {
 						new ConfirmModal(
 							this.app,
 							'Are you sure you want to reset your writing profile? This will clear all your answers.',
-							async () => {
-								this.plugin.activeProfile = null;
-								this.plugin.sessionLogs = [];
-								await this.plugin.savePurposeData();
+							() => {
+								void (async () => {
+									this.plugin.activeProfile = null;
+									this.plugin.sessionLogs = [];
+									await this.plugin.savePurposeData();
 
-								if (this.plugin.purposeSessionManager) {
-									this.plugin.purposeSessionManager.destroy();
-									this.plugin.purposeSessionManager = null;
-								}
+									if (this.plugin.purposeSessionManager) {
+										this.plugin.purposeSessionManager.destroy();
+										this.plugin.purposeSessionManager = null;
+									}
 
-								this.display();
+									this.display();
+								})();
 							}
 						).open();
 					}));
@@ -294,10 +296,12 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 					.setButtonText('Start onboarding')
 					.setClass('mod-cta')
 					.onClick(() => {
-						new QaOnboardingWizard(this.app, async (profile) => {
-							this.plugin.activeProfile = profile;
-							await this.plugin.savePurposeData();
-							this.display();
+						new QaOnboardingWizard(this.app, (profile) => {
+							void (async () => {
+								this.plugin.activeProfile = profile;
+								await this.plugin.savePurposeData();
+								this.display();
+							})();
 						}).open();
 					}));
 		}
@@ -423,9 +427,11 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 
 		titleInput.value = this.plugin.settings.defaultTitlePattern || '{{date}} - Writing Session';
 
-		titleInput.addEventListener('input', async () => {
-			this.plugin.settings.defaultTitlePattern = titleInput.value;
-			await this.plugin.saveSettings();
+		titleInput.addEventListener('input', () => {
+			void (async () => {
+				this.plugin.settings.defaultTitlePattern = titleInput.value;
+				await this.plugin.saveSettings();
+			})();
 		});
 
 		// Template Content Editor (Full Width)
@@ -446,9 +452,11 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 
 		templateTextarea.value = this.plugin.settings.defaultTemplate || '# {{title}}\n\n## Prompt\n{{random_prompt}}\n\n## Writing\n\n\n---\n*Written on {{weekday}} at {{time}}*';
 
-		templateTextarea.addEventListener('input', async () => {
-			this.plugin.settings.defaultTemplate = templateTextarea.value;
-			await this.plugin.saveSettings();
+		templateTextarea.addEventListener('input', () => {
+			void (async () => {
+				this.plugin.settings.defaultTemplate = templateTextarea.value;
+				await this.plugin.saveSettings();
+			})();
 		});
 		} catch (error) {
 			console.error('Error in WritingMomentumSettingTab.display():', error);

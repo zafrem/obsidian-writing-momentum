@@ -219,20 +219,22 @@ export default class WritingMomentumPlugin extends Plugin {
 		// Check if user needs onboarding
 		if (!this.activeProfile) {
 			// Show Q&A onboarding wizard for new users
-			new QaOnboardingWizard(this.app, async (profile) => {
-				this.activeProfile = profile;
-				await this.savePurposeData();
+			new QaOnboardingWizard(this.app, (profile) => {
+				void (async () => {
+					this.activeProfile = profile;
+					await this.savePurposeData();
 
-				// Initialize purpose session manager with profile
-				this.purposeSessionManager = new PurposeSessionManager(this);
-				this.purposeSessionManager.setActiveProfile(profile);
+					// Initialize purpose session manager with profile
+					this.purposeSessionManager = new PurposeSessionManager(this);
+					this.purposeSessionManager.setActiveProfile(profile);
 
-				// Start weekly nudge scheduler
-				this.startNudgeScheduler();
+					// Start weekly nudge scheduler
+					this.startNudgeScheduler();
 
-				// Show confirmation with recommendation
-				const rec = EstimationEngine.describe(profile.recommendation);
-				this.toastManager.success(`Profile created! Defaults set: ${rec}`, 5000);
+					// Show confirmation with recommendation
+					const rec = EstimationEngine.describe(profile.recommendation);
+					this.toastManager.success(`Profile created! Defaults set: ${rec}`, 5000);
+				})();
 			}).open();
 		} else {
 			// Existing user - initialize purpose session manager
@@ -378,16 +380,18 @@ export default class WritingMomentumPlugin extends Plugin {
 			id: 'wm-run-onboarding',
 			name: 'Re-run onboarding',
 			callback: () => {
-				new QaOnboardingWizard(this.app, async (profile) => {
-					this.activeProfile = profile;
-					await this.savePurposeData();
+				new QaOnboardingWizard(this.app, (profile) => {
+					void (async () => {
+						this.activeProfile = profile;
+						await this.savePurposeData();
 
-					if (this.purposeSessionManager) {
-						this.purposeSessionManager.setActiveProfile(profile);
-					}
+						if (this.purposeSessionManager) {
+							this.purposeSessionManager.setActiveProfile(profile);
+						}
 
-					const rec = EstimationEngine.describe(profile.recommendation);
-					this.toastManager.success(`Profile updated! ${rec}`, 4000);
+						const rec = EstimationEngine.describe(profile.recommendation);
+						this.toastManager.success(`Profile updated! ${rec}`, 4000);
+					})();
 				}).open();
 			}
 		});
@@ -406,27 +410,31 @@ export default class WritingMomentumPlugin extends Plugin {
 					this.activeProfile,
 					() => {
 						// Edit callback - reopen onboarding
-						new QaOnboardingWizard(this.app, async (profile) => {
-							this.activeProfile = profile;
-							await this.savePurposeData();
+						new QaOnboardingWizard(this.app, (profile) => {
+							void (async () => {
+								this.activeProfile = profile;
+								await this.savePurposeData();
 
-							if (this.purposeSessionManager) {
-								this.purposeSessionManager.setActiveProfile(profile);
-							}
+								if (this.purposeSessionManager) {
+									this.purposeSessionManager.setActiveProfile(profile);
+								}
 
-							this.toastManager.success('Answers updated!', 3000);
+								this.toastManager.success('Answers updated!', 3000);
+							})();
 						}).open();
 					},
-					async (newRec) => {
-						// Recalculate callback
-						if (this.activeProfile) {
-							this.activeProfile.recommendation = newRec;
-							this.activeProfile.updatedAt = Date.now();
-							await this.savePurposeData();
+					(newRec) => {
+						void (async () => {
+							// Recalculate callback
+							if (this.activeProfile) {
+								this.activeProfile.recommendation = newRec;
+								this.activeProfile.updatedAt = Date.now();
+								await this.savePurposeData();
 
-							const rec = EstimationEngine.describe(newRec);
-							this.toastManager.success(`Defaults recalculated: ${rec}`, 4000);
-						}
+								const rec = EstimationEngine.describe(newRec);
+								this.toastManager.success(`Defaults recalculated: ${rec}`, 4000);
+							}
+						})();
 					}
 				).open();
 			}
@@ -860,7 +868,7 @@ export default class WritingMomentumPlugin extends Plugin {
 		}
 	}
 
-	async startSessionOnCurrentFile() {
+	startSessionOnCurrentFile() {
 		// Get the currently active file
 		const activeFile = this.app.workspace.getActiveFile();
 
@@ -1183,7 +1191,7 @@ Write continuously for your target time. Don't worry about grammar, structure, o
 		];
 	}
 
-	async insertWritingPrompt() {
+	insertWritingPrompt() {
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!activeView) {
 			new Notice('No active note to insert prompt into');
@@ -1547,19 +1555,13 @@ class WritingDashboard extends ItemView {
 				setTimeout(() => {
 					copyBtn.setText('📋 copy to clipboard');
 				}, 2000);
-			} catch {
-				// Fallback for older browsers
-				const textArea = document.createElement('textarea');
-				textArea.value = textToCopy;
-				document.body.appendChild(textArea);
-				textArea.select();
-				document.execCommand('copy');
-				document.body.removeChild(textArea);
-				copyBtn.setText('✅ copied!');
-				setTimeout(() => {
-					copyBtn.setText('📋 copy to clipboard');
-				}, 2000);
-			}
+		} catch (error) {
+			// Show error if clipboard access fails
+			copyBtn.setText('❌ copy failed');
+			setTimeout(() => {
+				copyBtn.setText('📋 copy to clipboard');
+			}, 2000);
+		}
 		};
 	}
 

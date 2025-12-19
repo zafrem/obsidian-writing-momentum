@@ -81,13 +81,13 @@ export class ReminderScheduler {
     }
   }
 
-  private async triggerReminder(reminder: ReminderConfig) {
+  private triggerReminder(reminder: ReminderConfig) {
     const message = "Time to write! Click to start your writing session.";
-    
+
     const notice = new Notice(message, 0); // Persistent notice
-    
+
     // Add click handler to notice
-    const noticeEl = notice.noticeEl;
+    const noticeEl = notice.messageEl;
     noticeEl.addClass('clickable-notice');
     noticeEl.onclick = () => {
       notice.hide();

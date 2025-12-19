@@ -106,12 +106,11 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				.addButton(button => button
 					.setButtonText('Reset')
 					.setClass('mod-warning')
-					.onClick(() => {
+					.onClick(async () => {
 						new ConfirmModal(
 							this.app,
 							'Are you sure you want to reset your writing profile? This will clear all your answers.',
-							() => {
-						void (async () => {
+							async () => {
 								this.plugin.activeProfile = null;
 								this.plugin.sessionLogs = [];
 								await this.plugin.savePurposeData();
@@ -122,9 +121,8 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 								}
 
 								this.display();
-						})();
-					}
-				).open();
+							}
+						).open();
 					}));
 		} else {
 			// No profile - show onboarding button
@@ -135,12 +133,10 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 					.setButtonText('Start onboarding')
 					.setClass('mod-cta')
 					.onClick(() => {
-						new QaOnboardingWizard(this.app, (profile) => {
-							void (async () => {
+						new QaOnboardingWizard(this.app, async (profile) => {
 							this.plugin.activeProfile = profile;
 							await this.plugin.savePurposeData();
 							this.display();
-							})();
 						}).open();
 					}));
 		}
@@ -400,15 +396,13 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 			setting.addButton(button => button
 				.setIcon('copy')
 				.setTooltip('Duplicate template')
-				.onClick(() => {
-					void (async () => {
+				.onClick(async () => {
 					try {
 						await this.plugin.templateManager.duplicateTemplate(template.id);
 						this.display();
 					} catch (error) {
 						new Notice(`Error: ${error.message}`);
 					}
-					})();
 				}));
 
 			// Delete button for custom templates
@@ -416,19 +410,17 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 				.setIcon('trash')
 				.setTooltip('Delete template')
 				.setClass('mod-warning')
-				.onClick(() => {
+				.onClick(async () => {
 					new ConfirmModal(
 						this.app,
 						`Delete template "${template.name}"?`,
-						() => {
-							void (async () => {
-								try {
-									await this.plugin.templateManager.deleteTemplate(template.id);
-									this.display();
-								} catch (error) {
-									new Notice(`Error: ${error.message}`);
-								}
-							})();
+						async () => {
+							try {
+								await this.plugin.templateManager.deleteTemplate(template.id);
+								this.display();
+							} catch (error) {
+								new Notice(`Error: ${error.message}`);
+							}
 						}
 					).open();
 				}));
@@ -437,8 +429,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 			setting.addButton(button => button
 				.setIcon('copy')
 				.setTooltip('Duplicate to customize')
-				.onClick(() => {
-					void (async () => {
+				.onClick(async () => {
 					try {
 						const duplicated = await this.plugin.templateManager.duplicateTemplate(template.id);
 						new Notice(`Created "${duplicated.name}". Edit it to customize.`);
@@ -446,7 +437,6 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 					} catch (error) {
 						new Notice(`Error: ${error.message}`);
 					}
-					})();
 				}));
 		}
 	}
@@ -679,8 +669,7 @@ class TemplateImportModal extends Modal {
 		const buttonContainer = contentEl.createDiv('template-modal-buttons');
 
 		const importButton = buttonContainer.createEl('button', { text: 'Import', cls: 'mod-cta' });
-		importButton.addEventListener('click', () => {
-			void (async () => {
+		importButton.addEventListener('click', async () => {
 			try {
 				const jsonString = textarea.value.trim();
 				if (!jsonString) {
@@ -694,7 +683,6 @@ class TemplateImportModal extends Modal {
 			} catch (error) {
 				new Notice(`Import failed: ${error.message}`);
 			}
-			})();
 		});
 
 		const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
