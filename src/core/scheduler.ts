@@ -91,7 +91,7 @@ export class ReminderScheduler {
     noticeEl.addClass('clickable-notice');
     noticeEl.onclick = () => {
       notice.hide();
-      this.handleReminderClick(reminder);
+      void this.handleReminderClick(reminder);
     };
 
     // Add snooze button

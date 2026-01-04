@@ -50,7 +50,7 @@ export class NetworkPromptsService {
 
   constructor(plugin: IWritingMomentumPlugin) {
     this.plugin = plugin;
-    this.loadCachedPrompts();
+    void this.loadCachedPrompts();
   }
 
   private async loadCachedPrompts() {

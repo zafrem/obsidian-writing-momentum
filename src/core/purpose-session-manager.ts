@@ -53,7 +53,7 @@ export class PurposeSessionManager {
     };
 
     // Capture initial content
-    this.captureInitialContent(filePath);
+    void this.captureInitialContent(filePath);
 
     // Start appropriate tracking
     if (useProfile.recommendation.target.type === 'words') {
@@ -90,7 +90,7 @@ export class PurposeSessionManager {
     }
 
     this.charCountInterval = window.setInterval(() => {
-      this.updateCharCount();
+      void this.updateCharCount();
     }, 1000); // Update every second for responsive feedback
 
     this.plugin.registerInterval(this.charCountInterval);
@@ -265,7 +265,7 @@ export class PurposeSessionManager {
     const duration = Math.round((Date.now() - this.currentSession.startedAt) / 60000);
 
     // Save session
-    this.saveSession(this.currentSession);
+    void this.saveSession(this.currentSession);
 
     // Show completion toast
     this.showCompletionToast(duration);
@@ -280,7 +280,7 @@ export class PurposeSessionManager {
     this.currentSession.status = 'skipped';
     this.currentSession.endedAt = Date.now();
 
-    this.saveSession(this.currentSession);
+    void this.saveSession(this.currentSession);
     this.toastManager.info('Session ended');
     this.cleanup();
   }
@@ -291,7 +291,7 @@ export class PurposeSessionManager {
     this.currentSession.status = 'skipped';
     this.currentSession.endedAt = Date.now();
 
-    this.saveSession(this.currentSession);
+    void this.saveSession(this.currentSession);
     this.toastManager.info('Session skipped');
     this.cleanup();
   }

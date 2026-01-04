@@ -368,7 +368,7 @@ export class WritingMomentumSettingTab extends PluginSettingTab {
 					const selectedTemplate = templates[parseInt(value)];
 					this.plugin.settings.defaultTitlePattern = selectedTemplate.title;
 					this.plugin.settings.defaultTemplate = selectedTemplate.template;
-					this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 
 					// Refresh the display to update all fields
 					this.display();

@@ -254,7 +254,7 @@ export default class WritingMomentumPlugin extends Plugin {
 		// Add ribbon icon (always show on mobile for easy access)
 		if (this.settings.ui.showRibbonIcon || this.isMobile) {
 			this.addRibbonIcon('target', 'Writing momentum', () => {
-				this.openDashboard();
+				void this.openDashboard();
 			});
 		}
 
@@ -513,7 +513,7 @@ export default class WritingMomentumPlugin extends Plugin {
 
 		// Complete any active sessions to stop their timers
 		if (this.currentSession && this.currentSession.active) {
-			this.completeSession();
+			void this.completeSession();
 		}
 		// new Notice('All writing timers and alarms stopped');
 	}
@@ -776,7 +776,7 @@ export default class WritingMomentumPlugin extends Plugin {
 		}
 
 		this.wordCountInterval = window.setInterval(() => {
-			this.updateWordCount();
+			void this.updateWordCount();
 		}, 5000);
 
 		this.registerInterval(this.wordCountInterval);
@@ -1241,12 +1241,12 @@ class WritingDashboard extends ItemView {
 		return 'target';
 	}
 
-	async onOpen() {
+	onOpen() {
 		this.render();
 		this.startRealTimeUpdates();
 	}
 
-	async onClose() {
+	onClose() {
 		this.stopRealTimeUpdates();
 	}
 
@@ -1477,7 +1477,7 @@ class WritingDashboard extends ItemView {
 				cls: 'session-btn complete-btn'
 			});
 			completeBtn.onclick = () => {
-				this.plugin.completeSession();
+				void this.plugin.completeSession();
 				this.render();
 			};
 		} else {
@@ -1584,8 +1584,8 @@ class WritingDashboard extends ItemView {
 			text: '✏️ start on current file',
 			cls: 'action-btn start-current-file-btn'
 		});
-		startWithoutTemplateBtn.onclick = async () => {
-			await this.plugin.startSessionOnCurrentFile();
+		startWithoutTemplateBtn.onclick = () => {
+			this.plugin.startSessionOnCurrentFile();
 			// Dashboard will refresh automatically when session starts
 		};
 	}

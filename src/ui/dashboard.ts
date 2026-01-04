@@ -23,11 +23,11 @@ export class WritingDashboard extends ItemView {
     return 'target';
   }
 
-  async onOpen() {
+  onOpen() {
     this.render();
   }
 
-  async onClose() {
+  onClose() {
     // Nothing to clean up
   }
 

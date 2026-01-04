@@ -32,7 +32,7 @@ export class SessionManager {
     };
 
     // Store initial content for word count calculation
-    this.captureInitialContent(filePath);
+    void this.captureInitialContent(filePath);
 
     // Start monitoring word count
     this.startWordCountMonitoring();
@@ -64,7 +64,7 @@ export class SessionManager {
     }
 
     this.wordCountInterval = window.setInterval(() => {
-      this.updateSessionWordCount();
+      void this.updateSessionWordCount();
     }, 5000); // Update every 5 seconds
 
     // Register cleanup
@@ -121,7 +121,7 @@ export class SessionManager {
     this.currentSession.endTime = Date.now();
 
     // Save session
-    this.plugin.dataManager.addSession(this.currentSession);
+    void this.plugin.dataManager.addSession(this.currentSession);
 
     // Update continuous writing counter if enabled
     if (this.plugin.settings.continuousWriting.enabled) {
@@ -131,7 +131,7 @@ export class SessionManager {
       // Only count if session met minimum duration requirement
       if (duration >= targetDuration) {
         this.plugin.settings.continuousWriting.currentCount++;
-        this.plugin.saveSettings();
+        void this.plugin.saveSettings();
 
         // Check for achievement
         if (this.plugin.settings.continuousWriting.currentCount >= this.plugin.settings.continuousWriting.targetSessions) {
@@ -167,7 +167,7 @@ export class SessionManager {
   endSession() {
     if (this.currentSession && !this.currentSession.completed) {
       this.currentSession.endTime = Date.now();
-      this.plugin.dataManager.addSession(this.currentSession);
+      void this.plugin.dataManager.addSession(this.currentSession);
     }
 
     this.currentSession = null;
