@@ -653,7 +653,7 @@ export default class WritingMomentumPlugin extends Plugin {
 		}
 
 		if (leaf) {
-			workspace.revealLeaf(leaf);
+			await workspace.revealLeaf(leaf);
 		}
 	}
 
