@@ -1555,7 +1555,7 @@ class WritingDashboard extends ItemView {
 				setTimeout(() => {
 					copyBtn.setText('📋 copy to clipboard');
 				}, 2000);
-		} catch (_error) {
+		} catch {
 			// Show error if clipboard access fails
 			copyBtn.setText('❌ copy failed');
 			setTimeout(() => {
